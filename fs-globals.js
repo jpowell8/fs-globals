@@ -216,7 +216,7 @@
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well. 
    * @param {JSON object} statusOverrides This is where one time status callback overrides can be applied.
    */
-  FS.fetch = function (url, fetchInit, statusOverrides) {
+  FS.fetch = FS.fetch || function (url, fetchInit, statusOverrides) {
   return new Promise(function (resolve, reject) {
     if (!fetchInit) {
       fetchInit = {
