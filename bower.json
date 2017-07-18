@@ -1,0 +1,18 @@
+{
+  "name": "fs-globals",
+  "main": "fs-globals.html",
+  "homepage": "https://github.com/fs-webdev/fs-globals",
+  "description": "Functions on the FS object for use in webcomponents",
+  "keywords": [
+    "fs",
+    "object"
+  ],
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}

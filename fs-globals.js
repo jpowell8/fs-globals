@@ -1,5 +1,5 @@
 (function (window, document, undefined) {
-  if (typeof window.FS === undefined) {
+  if (typeof window.FS === 'undefined') {
     /* Global init for FS object if it doesn't exist*/
     window.FS = {
       JSON: {
@@ -192,36 +192,36 @@
     }
   };
 
-    /**
-     * This is a small fetch wrapper that respects the headers, status redirects and a flag from fetch defaults.
-     * @property {object} headers Key value pairs of headers to apply by default.
-     * @property {object} statusCallbacks Key value pairs of the form key=status code, value = callback
-     * @property {bool} rejectOnBadStatus Flag 
-     */
-    FS.fetchDefaults = FS.fetchDefaults || {
-      headers: {
-        "Content-Type": 'application/json',
-        "accept-language": FS.locale
-        //"Authorization": 'Bearer ' + FS.User.sessionId
-      },
-      statusCallbacks: {
-        401: function () {
-          window.location.reload();
-        }
-      },
-      rejectOnBadStatus: false
+  /**
+   * This is a small fetch wrapper that respects the headers, status redirects and a flag from fetch defaults.
+   * @property {object} headers Key value pairs of headers to apply by default.
+   * @property {object} statusCallbacks Key value pairs of the form key=status code, value = callback
+   * @property {bool} rejectOnBadStatus Flag 
+   */
+  FS.fetchDefaults = FS.fetchDefaults || {
+    headers: {
+      "Content-Type": 'application/json',
+      "accept-language": FS.locale
+    },
+    statusCallbacks: {
+      401: function () {
+        window.location.reload();
+        return;
+      }
     }
-    
+  }
+  if (FS.User) {
+    FS.fetchDefaults.headers.Authorization = FS.User.sessionId ? 'Bearer ' + FS.User.sessionId : null;
+  } else {
+    FS.fetchDefaults.headers.Authorization = null;
+  }
   /**
    * @param {string} url                  The path to the resource you are fetching
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well. 
-   * @param {JSON object} statusOverrides This is where one time status callback overrides can be applied.
+   * @param {JSON object} overrides       This is where one time status overrides can be applied with the same form as fetch defaults.
    */
-  FS.fetch = FS.fetch || function (url, fetchInit, statusOverrides) {
-  return new Promise(function (resolve, reject) {
-    if(FS.User) {
-      FS.fetchDefaults.headers.Authorization = FS.user.sessionId ? 'Bearer ' + FS.user.sessionID : null;
-    }
+  FS.fetch = FS.fetch || function (url, fetchInit, overrides) {
+
     if (!fetchInit) {
       fetchInit = {
         method: "get",
@@ -229,24 +229,24 @@
         cache: "default"
       };
     }
-    var options = FS.fetchDefaults.status
-    if (statusOverrides) {
-      for (key in statusOverrides) {
-        options.status[key] = statusOverrides[key];
+
+    fetchInit.headers = Object.assign({}, FS.fetchDefaults.headers, fetchInit.headers);
+    var overrides = Object.assign({}, fetchInit.overrides, overrides);
+    var statusCallbacks = Object.assign({}, FS.fetchDefaults.statusCallbacks, overrides.statusCallbacks);
+
+    var throwOnBadStatus = !overrides.doNotThrowOnBadStatus;
+    var convertToJson = !overrides.doNotConvertToJson;
+
+    return fetch(url, fetchInit).then(function (res) {
+      if (statusCallbacks[res.status]) {
+        return convertToJson ? statusCallbacks[res.status](res.json()) : statusCallbacks[res.status](res);
       }
-    }
-    if (fetchInit.headers) {
-      fetchInit.headers = Object.assign( {}, FS.fetchDefaults.headers, fetchInit.headers);
-    }
-    fetch(url, fetchInit).then(function (res) {
-      if (options[res.status]) {
-        options[res.status]()
-      } else if (options.throw && !res.ok) {
-        reject(new Error(res));
-      } else {
-        resolve(res);
+      if (!res.ok && throwOnBadStatus) {
+        var error = new Error('fetch call failed with status ' + res.status);
+        error.response = res;
+        throw error;
       }
-    })
-  });
+      return convertToJson ? res.json() : res;
+    });
   }
 })(window, document);
