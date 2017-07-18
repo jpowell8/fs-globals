@@ -1,6 +1,7 @@
 {
   "name": "fs-globals",
   "main": "fs-globals.html",
+  "version": "0.0.0",
   "homepage": "https://github.com/fs-webdev/fs-globals",
   "description": "Functions on the FS object for use in webcomponents",
   "keywords": [
