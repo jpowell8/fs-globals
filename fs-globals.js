@@ -50,7 +50,7 @@
       },
 
       Helpers: {
-        convertStringtoBool: function (str) {
+        convertStringToBool: function (str) {
           var bool = false;
           if (typeof str === 'string' || str === true) {
             bool = /^true$/i.test(str);
@@ -222,7 +222,7 @@
       fetchInit = {
         method: "get",
         headers: FS.fetchDefaults.headers,
-        cach: "default"
+        cache: "default"
       };
     }
     var options = FS.fetchDefaults.status
