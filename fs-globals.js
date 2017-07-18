@@ -174,23 +174,41 @@
     return FS.locale[0];
   }
 
-  FS.dialog = FS.dialog || {
-    /**
+  FS.dialog = FS.dialog || {}
+
+  /**
    * This function will register global elements and attach a reference to them to FS.dialog
    * @param {string} elementName - The name of the element to register e.g. fs-person-card
    * @returns {undefined} - Returns void.
    */
-    register: function (elementName) {
-      var element = document.createElement(elementName);
-      var camelCaseName = elementName.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
-      document.body.append(element)
-      Object.defineProperty(FS.dialog, camelCaseName, {
-        get: function () {
-          return element;
-        }
-      })
+  var buffer = [];
+  var bufferElements = true;
+  FS.dialog.register = FS.dialog.register || function(elementName) {
+    if (bufferElements) {
+      buffer.push(elementName);
+      return;
     }
+    registerElement(elementName);
+  }
+  function registerElement(elementName) {
+    var camelCaseName = elementName.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
+    if (FS.dialog[camelCaseName]) {
+      console.error('Attempted to create element', elementName, 'which already exists');
+      return;
+    }
+    var element = document.createElement(elementName);
+    document.body.append(element)
+    Object.defineProperty(FS.dialog, camelCaseName, {
+      get: function() {
+        return element;
+      }
+    })
   };
+
+  document.addEventListener("DOMContentLoaded", function(event) {
+    bufferElements = false
+    buffer.forEach(registerElement)
+  });
 
   /**
    * This is a small fetch wrapper that respects the headers, status redirects and a flag from fetch defaults.
