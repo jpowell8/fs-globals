@@ -201,8 +201,8 @@
     FS.fetchDefaults = FS.fetchDefaults || {
       headers: {
         "Content-Type": 'application/json',
-        "accept-language": FS.locale,
-        "Authorization": 'Bearer ' + FS.User.sessionId
+        "accept-language": FS.locale
+        //"Authorization": 'Bearer ' + FS.User.sessionId
       },
       statusCallbacks: {
         401: function () {
@@ -211,6 +211,7 @@
       },
       rejectOnBadStatus: false
     }
+    
   /**
    * @param {string} url                  The path to the resource you are fetching
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well. 
@@ -218,6 +219,9 @@
    */
   FS.fetch = FS.fetch || function (url, fetchInit, statusOverrides) {
   return new Promise(function (resolve, reject) {
+    if(FS.User) {
+      FS.fetchDefaults.headers.Authorization = FS.user.sessionId ? 'Bearer ' + FS.user.sessionID : null;
+    }
     if (!fetchInit) {
       fetchInit = {
         method: "get",
