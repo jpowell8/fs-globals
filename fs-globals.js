@@ -228,30 +228,32 @@
       }
     }
   }
-  if (FS.User) {
-    FS.fetchDefaults.headers.Authorization = FS.User.sessionId ? 'Bearer ' + FS.User.sessionId : null;
-  } else {
-    FS.fetchDefaults.headers.Authorization = null;
-  }
   /**
    * @param {string} url                  The path to the resource you are fetching
-   * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well. 
+   * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well.
    * @param {JSON object} fsFetchOptions       This is where one time status options that can be applied with the same form as fetch defaults.
-   * 
+   *
    * fsFetchOptionsEx = {
-   *    statusCallbacks: { // overrides the defaults 
+   *    statusCallbacks: { // overrides the defaults
    *      404: function () {//do something on all 404 responses.},
    *      500: function() {//do 500 stuff},
    *    },
-   * 
+   *
    ******** there are no global overrides for these to keep components from having to handel complex response patterns.
    *    doNotThrowOnBadStatus: false, // Only set this to true if you want a success on 400+ status codes. The only time it throws otherwise is on network errors.
    *    doNotConvertToJson: false // set this to true if you want the full res stream passed on response objects.
    * }
-   * 
-   * 
+   *
+   *
    */
   FS.fetch = FS.fetch || function (url, fetchInit, fsFetchOptions) {
+    if (!FS.fetchDefaults.headers.Authorization) {
+      if (FS.User) {
+        FS.fetchDefaults.headers.Authorization = FS.User.sessionId ? 'Bearer ' + FS.User.sessionId : null;
+      } else {
+        FS.fetchDefaults.headers.Authorization = null;
+      }
+    }
 
     if (!fetchInit) {
       fetchInit = {
@@ -261,7 +263,7 @@
     }
 
     fetchInit.credentials = FS.fetchDefaults.credentials || fetchInit.credentials;
-    fetchInit.headers = Object.assign({}, FS.fetchDefaults.headers, fetchInit.headers);
+    fetchInit.headers = createHeadersWithDefaults()
     var options = Object.assign({}, fetchInit, fsFetchOptions);
     var statusCallbacks = Object.assign({}, FS.fetchDefaults.statusCallbacks, options.statusCallbacks);
 
@@ -269,7 +271,7 @@
     var convertToJson = !options.doNotConvertToJson;
 
     return fetch(url, fetchInit).then(function (res) {
-      if (statusCallbacks[res.status]) { //Note this does not jasonify the response for you. This is because you may be handling things with no body and need the full res object. 
+      if (statusCallbacks[res.status]) {
         if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
           res.body = {};
         }
@@ -282,8 +284,25 @@
       }
       if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
         res.body = {};
-      } 
+      }
       return convertToJson ? res.json() : res;
     });
+
+    function createHeadersWithDefaults() {
+      var headers = fetchInit.headers || new Headers();
+      if (!headers.has) {
+        // this is not a headers object, it's just an object - this is not what the spec says to do
+        headers = Object.assign({}, FS.fetchDefaults.headers, fetchInit.headers);
+      } else {
+        // this is a headers object, so we'll append any headers we don't have
+        Object.keys(FS.fetchDefaults.headers).forEach(function(key){
+          if (!headers.has(key)) {
+            headers.append(key, FS.fetchDefaults.headers[key])
+          }
+        })
+
+      }
+      return headers;
+    }
   }
 })(window, document);
