@@ -259,6 +259,7 @@
         cache: "default"
       };
     }
+
     fetchInit.credentials = FS.fetchDefaults.credentials || fetchInit.credentials;
     fetchInit.headers = Object.assign({}, FS.fetchDefaults.headers, fetchInit.headers);
     var options = Object.assign({}, fetchInit, fsFetchOptions);
@@ -269,7 +270,10 @@
 
     return fetch(url, fetchInit).then(function (res) {
       if (statusCallbacks[res.status]) { //Note this does not jasonify the response for you. This is because you may be handling things with no body and need the full res object. 
-        return statusCallbacks[res.status](res);
+        if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
+          res.body = {};
+        }
+        return convertToJson ? statusCallbacks[res.status](res.json()) : statusCallbacks[res.status](res);
       }
       if (!res.ok && throwOnBadStatus) {
         var error = new Error('fetch call failed with status ' + res.status);
@@ -277,7 +281,7 @@
         throw error;
       }
       if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
-        return {};
+        res.body = {};
       } 
       return convertToJson ? res.json() : res;
     });
