@@ -214,13 +214,13 @@
    * This is a small fetch wrapper that respects the headers, status redirects and a flag from fetch defaults.
    * @property {object} headers Key value pairs of headers to apply by default.
    * @property {object} statusCallbacks Key value pairs of the form key=status code, value = callback
-   * @property {bool} rejectOnBadStatus Flag 
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
       "Content-Type": 'application/json',
       "accept-language": FS.locale
     },
+    credentials: "same-origin",
     statusCallbacks: {
       401: function () {
         window.location.reload();
@@ -236,34 +236,49 @@
   /**
    * @param {string} url                  The path to the resource you are fetching
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well. 
-   * @param {JSON object} overrides       This is where one time status overrides can be applied with the same form as fetch defaults.
+   * @param {JSON object} fsFetchOptions       This is where one time status options that can be applied with the same form as fetch defaults.
+   * 
+   * fsFetchOptionsEx = {
+   *    statusCallbacks: { // overrides the defaults 
+   *      404: function () {//do something on all 404 responses.},
+   *      500: function() {//do 500 stuff},
+   *    },
+   * 
+   ******** there are no global overrides for these to keep components from having to handel complex response patterns.
+   *    doNotThrowOnBadStatus: false, // Only set this to true if you want a success on 400+ status codes. The only time it throws otherwise is on network errors.
+   *    doNotConvertToJson: false // set this to true if you want the full res stream passed on response objects.
+   * }
+   * 
+   * 
    */
-  FS.fetch = FS.fetch || function (url, fetchInit, overrides) {
+  FS.fetch = FS.fetch || function (url, fetchInit, fsFetchOptions) {
 
     if (!fetchInit) {
       fetchInit = {
         method: "get",
-        headers: FS.fetchDefaults.headers,
         cache: "default"
       };
     }
-
+    fetchInit.credentials = FS.fetchDefaults.credentials || fetchInit.credentials;
     fetchInit.headers = Object.assign({}, FS.fetchDefaults.headers, fetchInit.headers);
-    var overrides = Object.assign({}, fetchInit.overrides, overrides);
-    var statusCallbacks = Object.assign({}, FS.fetchDefaults.statusCallbacks, overrides.statusCallbacks);
+    var options = Object.assign({}, fetchInit, fsFetchOptions);
+    var statusCallbacks = Object.assign({}, FS.fetchDefaults.statusCallbacks, options.statusCallbacks);
 
-    var throwOnBadStatus = !overrides.doNotThrowOnBadStatus;
-    var convertToJson = !overrides.doNotConvertToJson;
+    var throwOnBadStatus = !options.doNotThrowOnBadStatus;
+    var convertToJson = !options.doNotConvertToJson;
 
     return fetch(url, fetchInit).then(function (res) {
-      if (statusCallbacks[res.status]) {
-        return convertToJson ? statusCallbacks[res.status](res.json()) : statusCallbacks[res.status](res);
+      if (statusCallbacks[res.status]) { //Note this does not jasonify the response for you. This is because you may be handling things with no body and need the full res object. 
+        return statusCallbacks[res.status](res);
       }
       if (!res.ok && throwOnBadStatus) {
         var error = new Error('fetch call failed with status ' + res.status);
         error.response = res;
         throw error;
       }
+      if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
+        return {};
+      } 
       return convertToJson ? res.json() : res;
     });
   }
