@@ -271,7 +271,6 @@
     var convertToJson = !options.doNotConvertToJson;
 
     return fetch(url, fetchInit).then(function (res) {
-      var originalRes = res;
       if (statusCallbacks[res.status]) {
         return convertToJson ? statusCallbacks[res.status](convertToJsonOrReturnOriginalRes(res)) : statusCallbacks[res.status](res);
       }
@@ -285,6 +284,7 @@
 
     function convertToJsonOrReturnOriginalRes(resp) {
       // handle empty body
+      var originalRes = resp;
       return resp.json()
         .catch(function(){
           return originalRes;
