@@ -228,11 +228,6 @@
       }
     }
   }
-  if (FS.User) {
-    FS.fetchDefaults.headers.Authorization = FS.User.sessionId ? 'Bearer ' + FS.User.sessionId : null;
-  } else {
-    FS.fetchDefaults.headers.Authorization = null;
-  }
   /**
    * @param {string} url                  The path to the resource you are fetching
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well.
@@ -252,6 +247,13 @@
    *
    */
   FS.fetch = FS.fetch || function (url, fetchInit, fsFetchOptions) {
+    if (!FS.fetchDefaults.headers.Authorization) {
+      if (FS.User) {
+        FS.fetchDefaults.headers.Authorization = FS.User.sessionId ? 'Bearer ' + FS.User.sessionId : null;
+      } else {
+        FS.fetchDefaults.headers.Authorization = null;
+      }
+    }
 
     if (!fetchInit) {
       fetchInit = {
