@@ -217,7 +217,7 @@
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
-      "Content-Type": 'application/json',
+      "accept": 'application/json',
       "accept-language": FS.locale
     },
     credentials: "same-origin",

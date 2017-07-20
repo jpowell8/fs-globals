@@ -54,7 +54,8 @@ describe("FS.fetch() ", function () {
       FS.fetch('http://mytest.com').then(function (res) {
         expect(res).to.eql({a:'b'});
         expect(fetchMock.lastCall()[1].headers.get('Accept-Language')).to.eql("en");
-      }).then(done, done);//This is a workaround since chai as promised blows up in browsers where require is not available.
+        expect(fetchMock.lastCall()[1].headers.get('accept')).to.eql("application/json");
+      }).then(done, done);
     });
     it("should respect headers from fetchInit", function () {});
     it("should overwrite default headers with those in fetchInit", function () {});
