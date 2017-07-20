@@ -1,4 +1,11 @@
 var expect = chai.expect;
+var nativeFetch = window.fetch;
+var fetchResponse = {
+
+}
+window.fetch = function (url, fetchInit, options) {
+  return Promise.resolve(fetchResponse);
+}
 //Polyfill Object.assign for PhantomJs
 if (typeof Object.assign != 'function') {
   Object.assign = function(target, varArgs) { // .length of function is 2
@@ -39,21 +46,15 @@ describe("FS.fetch() ", function () {
   });
   describe("FS.fetch calls ", function () {
     it("should call with default headers if none are passed", function (done) {
-      this.timeout(5000);
+      this.timeout(2000);
       fetchMock.mock('http://mytest.com', {
         response:200,
-        body: {
-          test: "This is the body"
-        }
+        body: {a:'b'}
       });
       FS.fetch('http://mytest.com').then(function (res) {
-        console.log(res);
-        done()
-      }).catch(function (err) {
-          console.log("error thrown");
-          console.log(err.message);
-        done();
-      });
+        expect(res).to.eql({a:'b'});
+        expect(fetchMock.lastCall()[1].headers.get('Accept-Language')).to.eql("en");
+      }).then(done, done);//This is a workaround since chai as promised blows up in browsers where require is not available.
     });
     it("should respect headers from fetchInit", function () {});
     it("should overwrite default headers with those in fetchInit", function () {});
