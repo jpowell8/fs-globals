@@ -1,214 +1,173 @@
-(function (window, document, undefined) {
-  if (typeof window.FS === 'undefined') {
-    /* Global init for FS object if it doesn't exist*/
-    window.FS = {
-      JSON: {
-        parse: function (json, error) {
-          var config
-            , error = error || "Unspecified error";
+/**
+ * Create the FS object and all properties and functions needed by web components.
+ * Since this script can be run by HF as well as individual web components, every
+ * property and function MUST check that it exists before adding it.
+ */
+window.FS = (function(FS, document) {
+  /**
+   * Return the current language of the page. For backwards compatibility this
+   * is a function instead of a property.
+   */
+  FS.simpleLocale = FS.simpleLocale || function() {
+    return document.documentElement.getAttribute('lang') || 'en';
+  };
 
-          try {
-            config = JSON.parse(json);
-          } catch (e) {
-            console.info("Unable to parse JSON: " + error, json);
-            console.error(e);
-            config = {};
-          }
-          return config;
-        }
-      },
-
-      htmlEncode: function (text, includeFormatting) {
-        var retVal = "";
-        if (text) {
-          retVal = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/\xA0/g, "&nbsp;");
-          if (includeFormatting) {
-            retVal = retVal.replace(/\r{0,1}\n/g, "<br/>");
-            if (includeFormatting === "all") {
-              retVal = retVal.replace(/\t/g, "<span style=\"display:inline-block;width:3em;\"/>");
-            }
-          }
-        }
-        return retVal;
-      },
-
-      htmlDecode: function (html, includeFormatting) {
-        var retVal = "";
-
-        if (html) {
-          if (includeFormatting) {
-            FS._htmlDecodeDiv.innerHTML = html.replace(/\t|\r{0,1}\n/g, "").replace(/<br\s*\/{0,1}>/gi, "\n").replace(/<span style="display\:inline\-block\;width\:3em\;"\/>/g, "\t");
-          }
-          else {
-            FS._htmlDecodeDiv.innerHTML = html.replace(/\t/g, "").replace(/<br\s*\/{0,1}>/gi, "\n");
-          }
-          retVal = FS._htmlDecodeDiv.textContent;
-          FS._htmlDecodeDiv.innerHTML = ""; // Clear it out so we don't leave unused data hanging around
-        }
-
-        return retVal;
-      },
-
-      Helpers: {
-        convertStringToBool: function (str) {
-          var bool = false;
-          if (typeof str === 'string' || str === true) {
-            bool = /^true$/i.test(str);
-          }
-          return bool;
-        },
-
-        /* Returns a function, that, as long as it continues to be invoked, will not
-         * be triggered. The function will be called after it stops being called for
-         * N milliseconds. If `immediate` is passed, trigger the function on the
-         * leading edge, instead of the trailing.
-         * Copied from Underscore.js under the following license: https://github.com/jashkenas/underscore/blob/master/LICENSE
-        */
-        debounce: function (func, wait, immediate) {
-          var timeout;
-          return function () {
-            var context = this, args = arguments;
-            var later = function () {
-              timeout = null;
-              if (!immediate) func.apply(context, args);
-            };
-            var callNow = immediate && !timeout;
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-            if (callNow) func.apply(context, args);
-          };
-        },
-
-
-        /**
-         * Prevents a child element from scrolling a parent element (aka document).
-         * Taken from CodePen.io
-         * @see {@link http://codepen.io/Merri/pen/nhijD/}
-         * @param {Element} element - Scrolling element.
-         */
-        preventParentScroll: function (element) {
-          var html = document.getElementsByTagName('html')[0],
-            htmlTop = 0,
-            htmlBlockScroll = 0,
-            minDeltaY,
-            // this is where you put all your logic
-            wheelHandler = function (e) {
-              // do not prevent scrolling if element can't scroll
-              if (element.scrollHeight <= element.clientHeight) return;
-
-              // normalize Y delta
-              if (minDeltaY > Math.abs(e.deltaY) || !minDeltaY) {
-                minDeltaY = Math.abs(e.deltaY);
-              }
-
-              // prevent other wheel events and bubbling in general
-              if (e.stopPropagation) {
-                e.stopPropagation();
-              } else {
-                e.cancelBubble = true;
-              }
-
-              // if the height of the element is not a whole integer, we need to check for
-              // rounding errors
-              var rect = element.getBoundingClientRect()
-              var scrollHeight = element.scrollHeight + (parseInt(rect.height) - rect.height)
-
-              // most often you want to prevent default scrolling behavior (full page scroll!)
-              if ((e.deltaY < 0 && element.scrollTop === 0) ||
-                (e.deltaY > 0 && ((scrollHeight | 0) === element.scrollTop + element.clientHeight || element.scrollHeight === element.scrollTop + element.clientHeight))) {
-                if (e.preventDefault) {
-                  e.preventDefault();
-                } else {
-                  e.returnValue = false;
-                }
-              } else {
-                // safeguard against fast scroll in IE and mac
-                if (!htmlBlockScroll) {
-                  htmlTop = html.scrollTop;
-                }
-                htmlBlockScroll++;
-                // even IE11 updates scrollTop after the wheel event :/
-                setTimeout(function () {
-                  htmlBlockScroll--;
-                  if (!htmlBlockScroll && html.scrollTop !== htmlTop) {
-                    html.scrollTop = htmlTop;
-                  }
-                }, 0);
-              }
-            },
-            // here we do only compatibility stuff
-            mousewheelCompatibility = function (e) {
-              // no need to convert more than this, we normalize the value anyway
-              e.deltaY = -e.wheelDelta;
-              // and then call our main handler
-              wheelHandler(e);
-            };
-
-          // do not add twice!
-          if (element.removeWheelListener) return;
-
-          if (element.addEventListener) {
-            element.addEventListener('wheel', wheelHandler, false);
-            element.addEventListener('mousewheel', mousewheelCompatibility, false);
-            // expose a remove method
-            element.removeWheelListener = function () {
-              element.removeEventListener('wheel', wheelHandler, false);
-              element.removeEventListener('mousewheel', mousewheelCompatibility, false);
-              element.removeWheelListener = undefined;
-            };
-          }
-        }
+  FS.fetchDefaults = FS.fetchDefaults || {
+    headers: {
+      "Content-Type": 'application/json',
+      "accept-language": FS.simpleLocale()
+    },
+    credentials: "same-origin",
+    statusCallbacks: {
+      401: function () {
+        window.location.reload();
+        return;
       }
-    };
-  }
+    }
+  };
 
   /**
-   * Sets locale from the meta tag where snow normally sets it. If not set gives en.
+   * Get the current language translation. This function is a simple stub for TaaS
+   * that should only be used by native web components.
+   * @param {string} key
    */
-  FS.locale = FS.locale || (function () {
-    var localeMeta = document.querySelector('meta[name=allLocales]');
-    return localeMeta ? localeMeta.content.split(',') : ['en'];
-  })()
+  FS.i18n = FS.i18n || function(key) {
+    if (!this.taasContent) return '[' + key + ']';
 
-  FS.simpleLocale = FS.simpleLocale || function () {
-    return FS.locale[0];
-  }
+    var locale = this.simpleLocale() || 'en';
 
-  FS.dialog = FS.dialog || {}
+    // locale=zz returns the TaaS key in brackets
+    if (locale === 'zz'){
+      return '[' + key + ']';
+    }
+    // locale=ke returns just the last part of the key. useful for ensuring there are
+    // no hard-coded strings while not polluting the interface with really long key
+    // names
+    else if (locale === 'ke') {
+      var keyParts = key.split('.');
+      return '[' + keyParts[keyParts.length - 1] + ']';
+    }
+
+    // when we don't have locale data from the server we can only fallback to
+    // navigator.languages with the current locale at the front of the list and
+    // 'en' as the last of the list
+    var locales = FS.locale;
+    if (!locales) {
+
+      // make sure we're using a new reference and not changing navigator.languages
+      locales = [].concat(window.navigator.languages || []);
+      locales.unshift(locale);
+      locales.push('en');
+    }
+
+    var keyList = key.split('.');
+
+    for (var localeIndex = 0; localeIndex < locales.length; localeIndex++) {
+      var lang = locales[localeIndex];
+
+      // keep splitting sublocales off the lang until we find a supported one
+      while (!this.taasContent[lang] && lang.indexOf('-') !== -1) {
+        lang = lang.substring(0, lang.lastIndexOf('-'));
+      }
+
+      if (this.taasContent[lang]) {
+        var translation = this.taasContent[lang];
+
+        for (var i = 0; i < keyList.length; i++) {
+
+          // if the key is not found then move to the next locale
+          if (!translation[ keyList[i] ]) {
+            break;
+          }
+
+          translation = translation[ keyList[i] ];
+        }
+
+        // translation found
+        if (i === keyList.length) {
+          return translation;
+        }
+      }
+    }
+
+    // translation not found
+    return '[' + key + ']';
+  };
+
+  /**
+   * Encode html entities.
+   * @param {string} text
+   * @returns {string}
+   */
+  FS.htmlEncode = FS.htmlEncode || function(text) {
+    if (!text) return '';
+
+    var tagsToReplace = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      '\'': '&#39;',
+      ' ': '&nbsp;'  // \xA0 character
+    };
+
+    return text.replace(/[&<>"'\xA0]/g, function(tag) {
+      return tagsToReplace[tag];
+    });
+  };
+
+  /**
+   * Safely decode html entities.
+   * @see https://stackoverflow.com/a/34064434/2124254
+   *
+   * @param {string} text
+   * @returns {string}
+   */
+  FS.htmlDecode = FS.htmlDecode || function(text) {
+    if (!text) return '';
+
+    var doc = new DOMParser().parseFromString(text, "text/html");
+    return doc.documentElement.textContent;
+  };
 
   /**
    * This function will register global elements and attach a reference to them to FS.dialog
    * @param {string} elementName - The name of the element to register e.g. fs-person-card
    * @returns {undefined} - Returns void.
    */
-  var buffer = [];
-  var bufferElements = true;
-  FS.dialog.register = FS.dialog.register || function(elementName) {
-    if (bufferElements) {
-      buffer.push(elementName);
-      return;
-    }
-    registerElement(elementName);
-  }
-  function registerElement(elementName) {
-    var camelCaseName = elementName.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
-    if (FS.dialog[camelCaseName]) {
-      console.error('Attempted to create element', elementName, 'which already exists');
-      return;
-    }
-    var element = document.createElement(elementName);
-    document.body.append(element)
-    Object.defineProperty(FS.dialog, camelCaseName, {
-      get: function() {
-        return element;
-      }
-    })
-  };
+  FS.dialog = FS.dialog || {};
+  if (!FS.dialog.register) {
+    var buffer = [];
+    var bufferElements = true;
 
-  document.addEventListener("DOMContentLoaded", function(event) {
-    bufferElements = false
-    buffer.forEach(registerElement)
-  });
+    FS.dialog.register = function(elementName) {
+      if (bufferElements) {
+        buffer.push(elementName);
+        return;
+      }
+      registerElement(elementName);
+    }
+
+    function registerElement(elementName) {
+      var camelCaseName = elementName.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
+      if (FS.dialog[camelCaseName]) {
+        console.error('Attempted to create element', elementName, 'which already exists');
+        return;
+      }
+      var element = document.createElement(elementName);
+      document.body.append(element)
+      Object.defineProperty(FS.dialog, camelCaseName, {
+        get: function() {
+          return element;
+        }
+      });
+    };
+
+    document.addEventListener("DOMContentLoaded", function(event) {
+      bufferElements = false
+      buffer.forEach(registerElement)
+    });
+  }
 
   /**
    * This is a small fetch wrapper that respects the headers, status redirects and a flag from fetch defaults.
@@ -307,5 +266,33 @@
       }
       return headers;
     }
-  }
-})(window, document);
+  };
+
+  /**
+   * Function only used by native web components to add translations to taasContent.
+   * @param {object} translations - flat translation object
+   */
+  FS._registerTranslations = function(translations) {
+    FS.taasContent = FS.taasContent || {};
+
+    Object.keys(translations).forEach(function(lang) {
+      FS.taasContent[lang] = FS.taasContent[lang] || {};
+
+      Object.keys(translations[lang]).forEach(function(key) {
+        var keyParts = key.split('.');
+        var taasContent = FS.taasContent[lang];
+
+        // don't parse the last part of the key
+        for (var i = 0; i < keyParts.length - 1; i++) {
+          taasContent[ keyParts[i] ] = taasContent[ keyParts[i] ] || {};
+          taasContent = taasContent[ keyParts[i] ];
+        }
+
+        var lastKey = keyParts[keyParts.length - 1];
+        taasContent[lastKey] = taasContent[lastKey] || translations[lang][key];
+      });
+    });
+  };
+
+  return FS;
+})(window.FS || {}, document);

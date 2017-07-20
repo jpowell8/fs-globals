@@ -1,19 +1,21 @@
 {
   "name": "fs-globals",
-  "main": "fs-globals.html",
-  "version": "0.0.0",
+  "description": "Functions and properties used globally across the FamilySearch site, available to web components.",
   "homepage": "https://github.com/fs-webdev/fs-globals",
-  "description": "Functions on the FS object for use in webcomponents",
-  "keywords": [
-    "fs",
-    "object"
+  "author": {
+    "name": "FamilySearch",
+    "url": "https://familysearch.org/"
+  },
+  "main": [
+    "fs-globals.js",
+    "fs-globals.html"
   ],
-  "private": true,
+  "license": "SEE LICENSE IN LICENSE.txt",
   "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "test",
-    "tests"
+    ".*",
+    "bin/",
+    "bin/*",
+    "test/",
+    "test/*"
   ]
 }
