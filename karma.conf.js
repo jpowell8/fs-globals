@@ -7,15 +7,19 @@ module.exports = function(config) {
     // base path that will be used to resolve all patterns (eg. files, exclude)
     basePath: '',
 
-
     // frameworks to use
     // available frameworks: https://npmjs.org/browse/keyword/karma-adapter
-    frameworks: ['mocha'],
+    frameworks: ['mocha', 'chai'],
 
 
     // list of files / patterns to load in the browser
     files: [
-      'test/*.html'
+      //{pattern: 'node_modules/es6-promise/dist/es6-promise.auto.min.js', included: true },
+      {pattern: 'node_modules/whatwg-fetch/fetch.js', included: true },
+      {pattern: 'node_modules/fetch-mock/es5/client-browserified.js', included: true },
+      {pattern: 'bower_components/**/*.js', included: false},
+      {pattern: 'fs-globals.js', included: true },
+      {pattern: 'test/**.js', included: true }
     ],
 
 
@@ -55,9 +59,15 @@ module.exports = function(config) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['PhantomJS'],
+    browsers: ['Chrome'],
 
-
+    customLaunchers: {
+      Chrome_without_security: {
+        base: 'Chrome',
+        flags: ['--disable-web-security']
+      }
+    },
+    
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits
     singleRun: false,

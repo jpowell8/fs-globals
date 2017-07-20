@@ -6,12 +6,19 @@
   "directories": {
     "test": "test"
   },
-  "dependencies": {},
+  "dependencies": {
+  },
   "devDependencies": {
+    "chai": "^4.1.0",
+    "fetch-mock": "^5.12.1",
     "karma": "^1.7.0",
+    "karma-chai": "^0.1.0",
+    "karma-chrome-launcher": "^2.2.0",
     "karma-mocha": "^1.3.0",
     "karma-phantomjs-launcher": "^1.0.4",
-    "mocha": "^3.4.2"
+    "mocha": "^3.4.2",
+    "es6-promise-polyfill": "taylorhakes/promise-polyfill#6.0.2",
+    "whatwg-fetch": "^2.0.3"
   },
   "scripts": {
     "test": "node test/fetch-test.js"
