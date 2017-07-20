@@ -217,7 +217,7 @@
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
-      "Content-Type": 'application/json',
+      "accept": 'application/json',
       "accept-language": FS.locale
     },
     credentials: "same-origin",
@@ -272,21 +272,24 @@
 
     return fetch(url, fetchInit).then(function (res) {
       if (statusCallbacks[res.status]) {
-        if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
-          res.body = {};
-        }
-        return convertToJson ? statusCallbacks[res.status](res.json()) : statusCallbacks[res.status](res);
+        return convertToJson ? statusCallbacks[res.status](convertToJsonOrReturnOriginalRes(res)) : statusCallbacks[res.status](res);
       }
       if (!res.ok && throwOnBadStatus) {
         var error = new Error('fetch call failed with status ' + res.status);
         error.response = res;
         throw error;
       }
-      if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
-        res.body = {};
-      }
-      return convertToJson ? res.json() : res;
+      return convertToJson ? convertToJsonOrReturnOriginalRes(res) : res;
     });
+
+    function convertToJsonOrReturnOriginalRes(resp) {
+      // handle empty body
+      var originalRes = resp;
+      return resp.json()
+        .catch(function(){
+          return originalRes;
+        })
+    }
 
     function createHeadersWithDefaults() {
       var headers = fetchInit.headers || new Headers();
