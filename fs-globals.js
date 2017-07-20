@@ -12,20 +12,6 @@ window.FS = (function(FS, document) {
     return document.documentElement.getAttribute('lang') || 'en';
   };
 
-  FS.fetchDefaults = FS.fetchDefaults || {
-    headers: {
-      "Content-Type": 'application/json',
-      "accept-language": FS.simpleLocale()
-    },
-    credentials: "same-origin",
-    statusCallbacks: {
-      401: function () {
-        window.location.reload();
-        return;
-      }
-    }
-  };
-
   /**
    * Get the current language translation. This function is a simple stub for TaaS
    * that should only be used by native web components.
@@ -176,8 +162,8 @@ window.FS = (function(FS, document) {
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
-      "accept": 'application/json',
-      "accept-language": FS.locale
+      "Content-Type": 'application/json',
+      "accept-language": FS.simpleLocale()
     },
     credentials: "same-origin",
     statusCallbacks: {
@@ -186,7 +172,8 @@ window.FS = (function(FS, document) {
         return;
       }
     }
-  }
+  };
+
   /**
    * @param {string} url                  The path to the resource you are fetching
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well.
