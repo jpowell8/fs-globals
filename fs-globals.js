@@ -4,10 +4,18 @@
  * property and function MUST check that it exists before adding it.
  */
 window.FS = (function(FS, document) {
+  /**
+   * Return the current language of the page. For backwards compatibility this
+   * is a function instead of a property.
+   */
+  FS.simpleLocale = FS.simpleLocale || function() {
+    return document.documentElement.getAttribute('lang') || 'en';
+  };
+
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
       "Content-Type": 'application/json',
-      "accept-language": FS.simpleLocale
+      "accept-language": FS.simpleLocale()
     },
     credentials: "same-origin",
     statusCallbacks: {
@@ -16,14 +24,6 @@ window.FS = (function(FS, document) {
         return;
       }
     }
-  };
-
-  /**
-   * Return the current language of the page. For backwards compatibility this
-   * is a function instead of a property.
-   */
-  FS.simpleLocale = FS.simpleLocale || function() {
-    return document.documentElement.getAttribute('lang') || 'en';
   };
 
   /**
