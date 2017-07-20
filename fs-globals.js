@@ -173,6 +173,21 @@ window.FS = (function(FS, document) {
    * This is a small fetch wrapper that respects the headers, status redirects and a flag from fetch defaults.
    * @property {object} headers Key value pairs of headers to apply by default.
    * @property {object} statusCallbacks Key value pairs of the form key=status code, value = callback
+   */
+  FS.fetchDefaults = FS.fetchDefaults || {
+    headers: {
+      "accept": 'application/json',
+      "accept-language": FS.locale
+    },
+    credentials: "same-origin",
+    statusCallbacks: {
+      401: function () {
+        window.location.reload();
+        return;
+      }
+    }
+  }
+  /**
    * @param {string} url                  The path to the resource you are fetching
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well.
    * @param {JSON object} fsFetchOptions       This is where one time status options that can be applied with the same form as fetch defaults.
@@ -216,21 +231,24 @@ window.FS = (function(FS, document) {
 
     return fetch(url, fetchInit).then(function (res) {
       if (statusCallbacks[res.status]) {
-        if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
-          res.body = {};
-        }
-        return convertToJson ? statusCallbacks[res.status](res.json()) : statusCallbacks[res.status](res);
+        return convertToJson ? statusCallbacks[res.status](convertToJsonOrReturnOriginalRes(res)) : statusCallbacks[res.status](res);
       }
       if (!res.ok && throwOnBadStatus) {
         var error = new Error('fetch call failed with status ' + res.status);
         error.response = res;
         throw error;
       }
-      if( !res.body && convertToJson ) { //Makes responses with no body mostly 204's not throw on res.json()
-        res.body = {};
-      }
-      return convertToJson ? res.json() : res;
+      return convertToJson ? convertToJsonOrReturnOriginalRes(res) : res;
     });
+
+    function convertToJsonOrReturnOriginalRes(resp) {
+      // handle empty body
+      var originalRes = resp;
+      return resp.json()
+        .catch(function(){
+          return originalRes;
+        })
+    }
 
     function createHeadersWithDefaults() {
       var headers = fetchInit.headers || new Headers();
