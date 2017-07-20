@@ -1,3 +1,9 @@
-node_modules
+.DS_Store
+.env
+.vscode/*
 bower_components
-components
+bower-debug.log
+buildAssets
+node_modules
+npm-debug.log
+coverage
