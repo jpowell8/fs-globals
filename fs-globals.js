@@ -4,8 +4,6 @@
  * property and function MUST check that it exists before adding it.
  */
 window.FS = (function(FS, document) {
-  FS.simpleLocale = FS.simpleLocale || document.documentElement.getAttribute('lang');
-
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
       "Content-Type": 'application/json',
@@ -21,6 +19,14 @@ window.FS = (function(FS, document) {
   };
 
   /**
+   * Return the current language of the page. For backwards compatibility this
+   * is a function instead of a property.
+   */
+  FS.simpleLocale = FS.simpleLocale || function() {
+    return document.documentElement.getAttribute('lang') || 'en';
+  };
+
+  /**
    * Get the current language translation. This function is a simple stub for TaaS
    * that should only be used by native web components.
    * @param {string} key
@@ -28,7 +34,7 @@ window.FS = (function(FS, document) {
   FS.i18n = FS.i18n || function(key) {
     if (!this.taasContent) return '[' + key + ']';
 
-    var locale = this.simpleLocale || 'en';
+    var locale = this.simpleLocale() || 'en';
 
     // locale=zz returns the TaaS key in brackets
     if (locale === 'zz'){

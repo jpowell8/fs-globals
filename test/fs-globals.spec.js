@@ -40,47 +40,47 @@ describe('fs-globals', function() {
     });
 
     it('should return the translations for FS.simpleLocale', function() {
-      FS.simpleLocale = 'de';
+      FS.simpleLocale = function() { return 'de' };
 
       expect(FS.i18n('foo')).to.equal('bär');
     });
 
     it('should find nested keys', function() {
-      FS.simpleLocale = 'en';
+      FS.simpleLocale = function() { return 'en' };
 
       expect(FS.i18n('nested.foo')).to.equal('barium');
     });
 
     it('should accept sublocales', function() {
-      FS.simpleLocale = 'en-us';
+      FS.simpleLocale = function() { return 'en-us' };
 
       expect(FS.i18n('foo')).to.equal('baar');
     });
 
     it('should return translations for the first supported lang when the lang uses sublocales', function() {
-      FS.simpleLocale = 'en-us-foo-bar';
+      FS.simpleLocale = function() { return 'en-us-foo-bar' };
 
       expect(FS.i18n('foo')).to.equal('baar');
 
-      FS.simpleLocale = 'en-gb-nk1-ab2';
+      FS.simpleLocale = function() { return 'en-gb-nk1-ab2' };
 
       expect(FS.i18n('foo')).to.equal('bar');
     });
 
     it('should return translations for the default lang (en) when the lang isn\'t supported', function() {
-      FS.simpleLocale = 'zh';
+      FS.simpleLocale = function() { return 'zh' };
 
       expect(FS.i18n('foo')).to.equal('bar');
     });
 
     it('should return translations for the default lang (en) when the lang doesn\'t contain the desired key', function() {
-      FS.simpleLocale = 'es';
+      FS.simpleLocale = function() { return 'es' };
 
       expect(FS.i18n('lorium')).to.equal('ipsum');
     });
 
     it('should return translations for the default lang (en) for the nested key when the lang doesn\'t contain the desired key', function() {
-      FS.simpleLocale = 'es';
+      FS.simpleLocale = function() { return 'es' };
 
       expect(FS.i18n('nested.foo')).to.equal('barium');
     });
@@ -91,19 +91,19 @@ describe('fs-globals', function() {
     });
 
     it('should return the key in brackets if the lang is zz', function() {
-      FS.simpleLocale = 'zz';
+      FS.simpleLocale = function() { return 'zz' };
 
       expect(FS.i18n('foo')).to.equal('[foo]');
     });
 
     it('should return the last part of the ky in brackets if the lang is ke', function() {
-      FS.simpleLocale = 'ke';
+      FS.simpleLocale = function() { return 'ke' };
 
       expect(FS.i18n('foo.bar.baz')).to.equal('[baz]');
     });
 
     it('should use FS.locale if it\s set', function() {
-      FS.simpleLocale = 'en';
+      FS.simpleLocale = function() { return 'en' };
       FS.locale = ['de', 'en'];
 
       expect(FS.i18n('foo')).to.equal('bär');

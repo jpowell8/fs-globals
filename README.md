@@ -12,11 +12,11 @@ You can either load `fs-globals.js` as a script tag on the page or through an HT
 
 ## Properties
 
-* `simpleLocale` - The current language of the page.
 * `fetchDefaults` - Default headers and status callbacks as well as a flag for throwing errors on 400+ statuses.
 
 ## Functions
 
+* `simpleLocale` - The current language of the page.
 * `i18n` - Get the current languages translations.
 * `htmlEncode` - Encode html entities.
 * `htmlDecode` - Safely decode html entities.
