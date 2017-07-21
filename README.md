@@ -60,8 +60,8 @@ FS.htmlEncode('<a herf="javascript:void(0)">click</a>'); // => '&lt;a&nbsp;herf=
 Safely decode html entities.
 
 ```js
-FS.htmlEncode('&lt;div&gt;hello world&lt;/div&gt;');  // => '<div>Hello world</div>'
-FS.htmlEncode('&lt;a&nbsp;herf=&quot;javascript:void(0)&quot;&gt;click&lt;/a&gt;'); // => '<a herf="javascript:void(0)">click</a>'
+FS.htmlDecode('&lt;div&gt;hello world&lt;/div&gt;');  // => '<div>Hello world</div>'
+FS.htmlDecode('&lt;a&nbsp;herf=&quot;javascript:void(0)&quot;&gt;click&lt;/a&gt;'); // => '<a herf="javascript:void(0)">click</a>'
 ```
 
 ## fetch
