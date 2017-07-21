@@ -162,7 +162,7 @@ window.FS = (function(FS, document) {
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
-      "Content-Type": 'application/json',
+      "accept": 'application/json',
       "accept-language": FS.simpleLocale()
     },
     credentials: "same-origin",
@@ -200,13 +200,11 @@ window.FS = (function(FS, document) {
         FS.fetchDefaults.headers.Authorization = null;
       }
     }
-
-    if (!fetchInit) {
-      fetchInit = {
-        method: "get",
-        cache: "default"
-      };
+    if( !fetchInit ) {
+      fetchInit = {};
     }
+    fetchInit.method = fetchInit.method || 'get';
+    fetchInit.cache = fetchInit.cache || 'default';
 
     fetchInit.credentials = FS.fetchDefaults.credentials || fetchInit.credentials;
     fetchInit.headers = createHeadersWithDefaults()
@@ -215,7 +213,6 @@ window.FS = (function(FS, document) {
 
     var throwOnBadStatus = !options.doNotThrowOnBadStatus;
     var convertToJson = !options.doNotConvertToJson;
-
     return fetch(url, fetchInit).then(function (res) {
       if (statusCallbacks[res.status]) {
         return convertToJson ? statusCallbacks[res.status](convertToJsonOrReturnOriginalRes(res)) : statusCallbacks[res.status](res);
