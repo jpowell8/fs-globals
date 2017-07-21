@@ -66,4 +66,48 @@ FS.htmlEncode('&lt;a&nbsp;herf=&quot;javascript:void(0)&quot;&gt;click&lt;/a&gt;
 
 ## fetch
 
-Fetch wrapper that uses `FS.fetchDefaults`.
+Fetch wrapper that applies `FS.fetchDefaults`. This wrapper rejects on bad status, resolves with the body on success, and provides global headers and applies callbacks to given statuses. All behaviors have per request overrides. 
+
+```js
+  //structure of fetchDefaults:
+  FS.fetchDefaults = {
+    headers :  // Key value pairs or header object to set global headers
+      //Defaults if unchanged:
+      {
+        "Accept": "application/json",
+        "Accept-Lang": FS.simpleLocale(),
+        "Authentication": //set per FS.User.sessionId
+      }
+    statusCallbacks: //Key value pairs of the form number:callback. Number is the status to pass the callback on. Callbacks are applied to fetch responses body (unless you pass a flag).
+    //Defaults if unchanged
+    {
+      401: function () {
+        window.location.reload()
+      }
+    }
+  }
+
+  //FS fetch API
+  FS.fetch(url, fetchInit, options);
+  url = 'http://familysearch.org' //A string with the url. Follows as per the fetch API.
+  fetchInit =  { //The init object as per the fetch API.
+    method: "post",
+    headers: new Headers({'custom-header': "custom stuff"}),
+    cache:  "default"
+  }
+  options = { //Options to override fetch defaults behavior. 
+    statusCallbacks: {
+      401: function (res) { //Overrides fetchDefaults 401 if set.
+        return res; 
+      },
+      503: function (res) {
+        //do something on 503's
+      }
+    },
+    //There are no global overrides for these since that would make component fetch calls have to handle complex responses.
+    doNotThrowOnBadStatus: true, //Sets flag to get default fetch reject resolve behavior.
+    doNotConvertToJson: true //Sets flag to make response the full res object as a stream like native fetch.
+  }
+```
+For information on the fetch API see:
+* [https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)
