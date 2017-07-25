@@ -162,8 +162,9 @@ window.FS = (function(FS, document) {
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
-      "accept": 'application/json',
-      "accept-language": FS.simpleLocale()
+      "Accept": 'application/json',
+      "Content-Type": 'application/json',
+      "Accept-language": FS.simpleLocale()
     },
     credentials: "same-origin",
     statusCallbacks: {

@@ -75,6 +75,7 @@ Fetch wrapper that applies `FS.fetchDefaults`. This wrapper rejects on bad statu
       //Defaults if unchanged:
       {
         "Accept": "application/json",
+        "Content-Type": "application/json",
         "Accept-Lang": FS.simpleLocale(),
         "Authentication": FS.User.sessionId
       },
