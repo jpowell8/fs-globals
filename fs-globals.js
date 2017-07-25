@@ -227,7 +227,10 @@ window.FS = (function(FS, document) {
         FS.fetchDefaults.headers.Authorization = null;
       }
     }
-    if( !fetchInit ) {
+    if (!fsFetchOptions) {
+      fsFetchOptions = {};
+    }
+    if (!fetchInit) {
       fetchInit = {};
     }
     var preProcessor = fsFetchOptions.preProcessingCallback || fetchInit.preProcessingCallback || undefined;
