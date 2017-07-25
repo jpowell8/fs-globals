@@ -205,6 +205,8 @@ window.FS = (function(FS, document) {
    * @param {JSON object} fsFetchOptions       This is where one time status options that can be applied with the same form as fetch defaults.
    *
    * fsFetchOptionsEx = {
+   *    preProcessingCallback: function(fetchInit) { return fetchInit },
+   *    postProcessingCallback: function(res) { return Promise.resolve(res) },
    *    statusCallbacks: { // overrides the defaults
    *      404: function () {//do something on all 404 responses.},
    *      500: function() {//do 500 stuff},
@@ -238,6 +240,7 @@ window.FS = (function(FS, document) {
 
     var throwOnBadStatus = !options.doNotThrowOnBadStatus;
     var convertToJson = !options.doNotConvertToJson;
+    if (options.preProcessingCallback) fetchInit = options.preProcessingCallback(fetchInit);
     return fetch(url, fetchInit).then(function (res) {
       if (statusCallbacks[res.status]) {
         return convertToJson ? statusCallbacks[res.status](convertToJsonOrReturnOriginalRes(res)) : statusCallbacks[res.status](res);
@@ -247,7 +250,8 @@ window.FS = (function(FS, document) {
         error.response = res;
         throw error;
       }
-      return convertToJson ? convertToJsonOrReturnOriginalRes(res) : res;
+      res = convertToJson ? convertToJsonOrReturnOriginalRes(res) : res;
+      return options.postProcessingCallback ? options.postProcessingCallback(res) : res;
     });
 
     function convertToJsonOrReturnOriginalRes(resp) {
