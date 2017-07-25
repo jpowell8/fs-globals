@@ -227,9 +227,15 @@ window.FS = (function(FS, document) {
         FS.fetchDefaults.headers.Authorization = null;
       }
     }
-    if( !fetchInit ) {
+    if (!fsFetchOptions) {
+      fsFetchOptions = {};
+    }
+    if (!fetchInit) {
       fetchInit = {};
     }
+    var preProcessor = fsFetchOptions.preProcessingCallback || fetchInit.preProcessingCallback || undefined;
+    if (preProcessor) fetchInit = preProcessor(fetchInit);
+
     fetchInit.method = fetchInit.method || 'get';
     fetchInit.cache = fetchInit.cache || 'default';
 
@@ -240,7 +246,6 @@ window.FS = (function(FS, document) {
 
     var throwOnBadStatus = !options.doNotThrowOnBadStatus;
     var convertToJson = !options.doNotConvertToJson;
-    if (options.preProcessingCallback) fetchInit = options.preProcessingCallback(fetchInit);
     return fetch(url, fetchInit).then(function (res) {
       if (statusCallbacks[res.status]) {
         return convertToJson ? statusCallbacks[res.status](convertToJsonOrReturnOriginalRes(res)) : statusCallbacks[res.status](res);
