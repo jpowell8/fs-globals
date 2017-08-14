@@ -199,6 +199,22 @@ window.FS = (function(FS, document) {
       return to;
     };
   }
+  
+  if (!String.prototype.includes) {
+    String.prototype.includes = function(search, start) {
+      'use strict';
+      if (typeof start !== 'number') {
+        start = 0;
+      }
+
+      if (start + search.length > this.length) {
+        return false;
+      } else {
+        return this.indexOf(search, start) !== -1;
+      }
+    };
+  }
+  
   /**
    * @param {string} url                  The path to the resource you are fetching
    * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well.
