@@ -132,7 +132,7 @@ window.FS = (function(FS, document) {
         return;
       }
       registerElement(elementName);
-    }
+    };
 
     function registerElement(elementName) {
       var camelCaseName = elementName.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
@@ -141,16 +141,16 @@ window.FS = (function(FS, document) {
         return;
       }
       var element = document.createElement(elementName);
-      document.body.append(element)
+      document.body.append(element);
       Object.defineProperty(FS.dialog, camelCaseName, {
         get: function() {
           return element;
         }
       });
-    };
+    }
 
-    document.addEventListener("DOMContentLoaded", function(event) {
-      bufferElements = false
+    document.addEventListener("DOMContentLoaded", function() {
+      bufferElements = false;
       buffer.forEach(registerElement)
     });
   }
@@ -162,14 +162,14 @@ window.FS = (function(FS, document) {
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
-      "accept": 'application/json',
-      "accept-language": FS.simpleLocale()
+      "Accept": 'application/json',
+      "Content-Type": 'application/json',
+      "Accept-language": FS.simpleLocale()
     },
     credentials: "same-origin",
     statusCallbacks: {
       401: function () {
         window.location.reload();
-        return;
       }
     }
   };
@@ -200,9 +200,9 @@ window.FS = (function(FS, document) {
     };
   }
   /**
-   * @param {string} url                  The path to the resource you are fetching
-   * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well.
-   * @param {JSON object} fsFetchOptions       This is where one time status options that can be applied with the same form as fetch defaults.
+   * @param {string} url             The path to the resource you are fetching
+   * @param {Object} fetchInit       The init object in JSON format from fetch api. This is where you can do 1 time overwrites of headers as well.
+   * @param {Object} fsFetchOptions  This is where one time status options that can be applied with the same form as fetch defaults.
    *
    * fsFetchOptionsEx = {
    *    preProcessingCallback: function(fetchInit) { return fetchInit },
@@ -240,7 +240,7 @@ window.FS = (function(FS, document) {
     fetchInit.cache = fetchInit.cache || 'default';
 
     fetchInit.credentials = FS.fetchDefaults.credentials || fetchInit.credentials;
-    fetchInit.headers = createHeadersWithDefaults()
+    fetchInit.headers = createHeadersWithDefaults();
     var options = Object.assign({}, fetchInit, fsFetchOptions);
     var statusCallbacks = Object.assign({}, FS.fetchDefaults.statusCallbacks, options.statusCallbacks);
 
