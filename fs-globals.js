@@ -309,8 +309,13 @@ window.FS = (function(FS, document) {
       var headers = correctCaseOnInputHeaders(fetchInit.headers);
         Object.keys(FS.fetchDefaults.headers).forEach(function(key){
           if (!headers.has(key)) {
-            headers[key] = FS.fetchDefaults.headers[key];
-            headers.append(key, FS.fetchDefaults.headers[key]);
+
+            // Content-Type should only be set when body is being passed
+            if (key !== 'Content-Type' || (fetchInit && fetchInit.body) ) {
+              headers[key] = FS.fetchDefaults.headers[key];
+              headers.append(key, FS.fetchDefaults.headers[key]);
+            }
+
           }
         });
       return headers;

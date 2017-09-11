@@ -169,6 +169,12 @@ describe("FS.fetch() ", function () {
       }).then(done, done);
     });
 
+    it ("should not set default Content-Type header without body", function (done) {
+      FS.fetch('http://test.familysearch.com', {
+      }).then(function (res) {
+        expect(fetchMock.lastCall()[1].headers["Content-Type"]).to.be.undefined;
+      }).then(done, done);
+    });
 
   });
 });
