@@ -2,10 +2,12 @@ var expect = chai.expect;
 var nativeFetch = window.fetch;
 var fetchResponse = {
 
-}
+};
+
 window.fetch = function (url, fetchInit, options) {
   return Promise.resolve(fetchResponse);
-}
+};
+
 //Polyfill Object.assign for PhantomJs
 if (typeof Object.assign != 'function') {
   Object.assign = function (target, varArgs) { // .length of function is 2
@@ -90,7 +92,8 @@ describe("FS.fetch() ", function () {
           "accept": "test"
         }
       }).then(function (res) {
-        expect(fetchMock.lastCall()[1].headers.accept).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.accept).to.be.undefined;
+        expect(fetchMock.lastCall()[1].headers.Accept).to.eql("test");
       }).then(done, done);
     });
 
@@ -154,5 +157,18 @@ describe("FS.fetch() ", function () {
         expect(res.status).to.eql(200);
       }).then(done, done);
     });
+
+    it ("should match default header and correct case", function (done) {
+      FS.fetch('http://test.familysearch.com', {
+        headers: {
+          "coNteNt-tYPe": "test"
+        }
+      }).then(function (res) {
+        expect(fetchMock.lastCall()[1].headers["coNteNt-tYPe"]).to.be.undefined;
+        expect(fetchMock.lastCall()[1].headers["Content-Type"]).to.eql("test");
+      }).then(done, done);
+    });
+
+
   });
 });

@@ -122,6 +122,7 @@ window.FS = (function(FS, document) {
    * @returns {undefined} - Returns void.
    */
   FS.dialog = FS.dialog || {};
+
   if (!FS.dialog.register) {
     var buffer = [];
     var bufferElements = true;
@@ -173,6 +174,7 @@ window.FS = (function(FS, document) {
       }
     }
   };
+
   // TODO: remove Object.assign polyfill when IE11 supports it or we don't support IE11
   // Polyfill for Object.assign
   if (typeof Object.assign != 'function') {
@@ -199,6 +201,7 @@ window.FS = (function(FS, document) {
       return to;
     };
   }
+
   /**
    * @param {string} url             The path to the resource you are fetching
    * @param {Object} fetchInit       The init object in JSON format from fetch api. This is where you can do 1 time overwrites of headers as well.
@@ -268,20 +271,48 @@ window.FS = (function(FS, document) {
         })
     }
 
+
+    /**
+     *  This function it complicated by the need to have the resulting object be of
+     *  type Headers. It takes the input headers and converts them to the proper case.
+     *  It added them to the corrected key, and appends them as a header parameter for fetch.
+     *
+     * @param fetchInitHeaders
+     */
+    function correctCaseOnInputHeaders(fetchInitHeaders) {
+      var headers = new Headers();
+      if (fetchInitHeaders) {
+        Object.keys(fetchInitHeaders).forEach(
+            function(key) {
+              var matched = false;
+              Object.keys(FS.fetchDefaults.headers).forEach(
+                  function (defaultKey) {
+                    if (key.toUpperCase() === defaultKey.toUpperCase()) {
+                      headers.append(defaultKey, fetchInitHeaders[key]);
+                      headers[defaultKey] = fetchInitHeaders[key];
+                      matched = true;
+                    }
+                  }
+              );
+
+              if (!matched) {
+                headers.append(key, fetchInitHeaders[key]);
+                headers[key] = fetchInitHeaders[key];
+              }
+            }
+        )
+      }
+      return headers;
+    }
+
     function createHeadersWithDefaults() {
-      var headers = fetchInit.headers || new Headers();
-      if (!headers.has) {
-        // this is not a headers object, it's just an object - this is not what the spec says to do
-        headers = Object.assign({}, FS.fetchDefaults.headers, fetchInit.headers);
-      } else {
-        // this is a headers object, so we'll append any headers we don't have
+      var headers = correctCaseOnInputHeaders(fetchInit.headers);
         Object.keys(FS.fetchDefaults.headers).forEach(function(key){
           if (!headers.has(key)) {
-            headers.append(key, FS.fetchDefaults.headers[key])
+            headers[key] = FS.fetchDefaults.headers[key];
+            headers.append(key, FS.fetchDefaults.headers[key]);
           }
-        })
-
-      }
+        });
       return headers;
     }
   };
