@@ -273,11 +273,11 @@ window.FS = (function(FS, document) {
 
 
     /**
-     *  This function it complicated by the need to have the resulting object be of
-     *  type Headers. It takes the input headers and converts them to the proper case.
-     *  It added them to the corrected key, and appends them as a header parameter for fetch.
+     *  This function it complicated by the need to have the resulting object be of type Headers.
+     *  It takes the input headers and converts them to the proper case, adding the header values
+     *  using the corrected key, and appending them using the header.append method.
      *
-     * @param fetchInitHeaders
+     * @param fetchInitHeaders Input headers optionally supplied to fetch
      */
     function correctCaseOnInputHeaders(fetchInitHeaders) {
       var headers = new Headers();
