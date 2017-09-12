@@ -242,7 +242,7 @@ window.FS = (function(FS, document) {
     fetchInit.method = fetchInit.method || 'get';
     fetchInit.cache = fetchInit.cache || 'default';
 
-    fetchInit.credentials = FS.fetchDefaults.credentials || fetchInit.credentials;
+    fetchInit.credentials = fetchInit.credentials || FS.fetchDefaults.credentials;
     fetchInit.headers = createHeadersWithDefaults();
     var options = Object.assign({}, fetchInit, fsFetchOptions);
     var statusCallbacks = Object.assign({}, FS.fetchDefaults.statusCallbacks, options.statusCallbacks);
@@ -272,52 +272,38 @@ window.FS = (function(FS, document) {
     }
 
 
+    function isHeadersObject(checkHeader) {
+      return (checkHeader.has && checkHeader.get && checkHeader.set);
+    }
+
     /**
-     *  This function it complicated by the need to have the resulting object be of type Headers.
-     *  It takes the input headers and converts them to the proper case, adding the header values
-     *  using the corrected key, and appending them using the header.append method.
+     *  Force the input headers to be a Headers object for fetch
      *
      * @param fetchInitHeaders Input headers optionally supplied to fetch
      */
-    function correctCaseOnInputHeaders(fetchInitHeaders) {
-      var headers = new Headers();
-      if (fetchInitHeaders) {
-        Object.keys(fetchInitHeaders).forEach(
-            function(key) {
-              var matched = false;
-              Object.keys(FS.fetchDefaults.headers).forEach(
-                  function (defaultKey) {
-                    if (key.toUpperCase() === defaultKey.toUpperCase()) {
-                      headers.append(defaultKey, fetchInitHeaders[key]);
-                      headers[defaultKey] = fetchInitHeaders[key];
-                      matched = true;
-                    }
-                  }
-              );
-
-              if (!matched) {
-                headers.append(key, fetchInitHeaders[key]);
-                headers[key] = fetchInitHeaders[key];
-              }
-            }
-        )
+    function correctInputHeaders(fetchInitHeaders) {
+      var headers = fetchInitHeaders;
+      if (headers && !isHeadersObject(headers)) {
+        headers = new Headers();
+        Object.keys(fetchInitHeaders).forEach(function(key) {
+          headers.set(key, fetchInitHeaders[key])
+        });
       }
-      return headers;
+      return headers || new Headers();
     }
 
     function createHeadersWithDefaults() {
-      var headers = correctCaseOnInputHeaders(fetchInit.headers);
-        Object.keys(FS.fetchDefaults.headers).forEach(function(key){
-          if (!headers.has(key)) {
+      var headers = correctInputHeaders(fetchInit.headers);
+      Object.keys(FS.fetchDefaults.headers).forEach(function(key) {
+        if (!headers.has(key)) {
 
-            // Content-Type should only be set when body is being passed
-            if (key !== 'Content-Type' || (fetchInit && fetchInit.body) ) {
-              headers[key] = FS.fetchDefaults.headers[key];
-              headers.append(key, FS.fetchDefaults.headers[key]);
-            }
-
+          // Content-Type should only be set when body is being passed
+          if (key !== 'Content-Type' || (fetchInit && fetchInit.body) ) {
+            headers.set(key, FS.fetchDefaults.headers[key]);
           }
-        });
+
+        }
+      });
       return headers;
     }
   };

@@ -82,7 +82,7 @@ describe("FS.fetch() ", function () {
           "test": "test"
         }
       }).then(function (res) {
-        expect(fetchMock.lastCall()[1].headers.test).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.get('test')).to.eql("test");
       }).then(done, done);
     });
 
@@ -92,15 +92,15 @@ describe("FS.fetch() ", function () {
           "accept": "test"
         }
       }).then(function (res) {
-        expect(fetchMock.lastCall()[1].headers.accept).to.be.undefined;
-        expect(fetchMock.lastCall()[1].headers.Accept).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.has('Accept')).to.be.true;
+        expect(fetchMock.lastCall()[1].headers.get('Accept')).to.eql("test");
       }).then(done, done);
     });
 
     it("should respect default callbacks on status", function (done) {
       FS.fetchDefaults.statusCallbacks[222] = function (res) {
         return "default"
-      }
+      };
       FS.fetch('http://test.familysearch.com/222').then(function (res) {
         expect(res).to.eql("default");
       }).then(done, done);
@@ -164,8 +164,21 @@ describe("FS.fetch() ", function () {
           "coNteNt-tYPe": "test"
         }
       }).then(function (res) {
-        expect(fetchMock.lastCall()[1].headers["coNteNt-tYPe"]).to.be.undefined;
-        expect(fetchMock.lastCall()[1].headers["Content-Type"]).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.has("coNteNt-tYPe")).to.be.true;
+        expect(fetchMock.lastCall()[1].headers.get("Content-Type")).to.eql("test");
+      }).then(done, done);
+    });
+
+    it ("should match default header and correct case for type Headers", function (done) {
+      var headers = new Headers();
+      headers.append("coNteNt-tYPe", "test");
+
+      FS.fetch('http://test.familysearch.com', {
+        headers: headers
+      }).then(function (res) {
+        expect(fetchMock.lastCall()[1].headers.get("coNteNt-tYPe")).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.get("Content-Type")).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.has("Content-Type")).to.be.true;
       }).then(done, done);
     });
 
