@@ -2,10 +2,12 @@ var expect = chai.expect;
 var nativeFetch = window.fetch;
 var fetchResponse = {
 
-}
+};
+
 window.fetch = function (url, fetchInit, options) {
   return Promise.resolve(fetchResponse);
-}
+};
+
 //Polyfill Object.assign for PhantomJs
 if (typeof Object.assign != 'function') {
   Object.assign = function (target, varArgs) { // .length of function is 2
@@ -80,7 +82,7 @@ describe("FS.fetch() ", function () {
           "test": "test"
         }
       }).then(function (res) {
-        expect(fetchMock.lastCall()[1].headers.test).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.get('test')).to.eql("test");
       }).then(done, done);
     });
 
@@ -90,14 +92,15 @@ describe("FS.fetch() ", function () {
           "accept": "test"
         }
       }).then(function (res) {
-        expect(fetchMock.lastCall()[1].headers.accept).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.has('Accept')).to.be.true;
+        expect(fetchMock.lastCall()[1].headers.get('Accept')).to.eql("test");
       }).then(done, done);
     });
 
     it("should respect default callbacks on status", function (done) {
       FS.fetchDefaults.statusCallbacks[222] = function (res) {
         return "default"
-      }
+      };
       FS.fetch('http://test.familysearch.com/222').then(function (res) {
         expect(res).to.eql("default");
       }).then(done, done);
@@ -154,5 +157,37 @@ describe("FS.fetch() ", function () {
         expect(res.status).to.eql(200);
       }).then(done, done);
     });
+
+    it ("should match default header and correct case", function (done) {
+      FS.fetch('http://test.familysearch.com', {
+        headers: {
+          "coNteNt-tYPe": "test"
+        }
+      }).then(function (res) {
+        expect(fetchMock.lastCall()[1].headers.has("coNteNt-tYPe")).to.be.true;
+        expect(fetchMock.lastCall()[1].headers.get("Content-Type")).to.eql("test");
+      }).then(done, done);
+    });
+
+    it ("should match default header and correct case for type Headers", function (done) {
+      var headers = new Headers();
+      headers.append("coNteNt-tYPe", "test");
+
+      FS.fetch('http://test.familysearch.com', {
+        headers: headers
+      }).then(function (res) {
+        expect(fetchMock.lastCall()[1].headers.get("coNteNt-tYPe")).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.get("Content-Type")).to.eql("test");
+        expect(fetchMock.lastCall()[1].headers.has("Content-Type")).to.be.true;
+      }).then(done, done);
+    });
+
+    it ("should not set default Content-Type header without body", function (done) {
+      FS.fetch('http://test.familysearch.com', {
+      }).then(function (res) {
+        expect(fetchMock.lastCall()[1].headers["Content-Type"]).to.be.undefined;
+      }).then(done, done);
+    });
+
   });
 });

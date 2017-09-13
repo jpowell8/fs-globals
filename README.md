@@ -75,9 +75,10 @@ Fetch wrapper that applies `FS.fetchDefaults`. This wrapper rejects on bad statu
       //Defaults if unchanged:
       {
         "Accept": "application/json",
+        "Content-Type": "application/json",
         "Accept-Lang": FS.simpleLocale(),
-        "Authentication": //set per FS.User.sessionId
-      }
+        "Authentication": FS.User.sessionId
+      },
     statusCallbacks: //Key value pairs of the form number:callback. Number is the status to pass the callback on. Callbacks are applied to fetch responses body (unless you pass a flag).
     //Defaults if unchanged
     {
@@ -85,16 +86,16 @@ Fetch wrapper that applies `FS.fetchDefaults`. This wrapper rejects on bad statu
         window.location.reload()
       }
     }
-  }
+  };
 
   //FS fetch API
   FS.fetch(url, fetchInit, options);
-  url = 'http://familysearch.org' //A string with the url. Follows as per the fetch API.
+  url = 'http://familysearch.org'; //A string with the url. Follows as per the fetch API.
   fetchInit =  { //The init object as per the fetch API.
     method: "post",
     headers: new Headers({'custom-header': "custom stuff"}),
     cache:  "default"
-  }
+  };
   options = { //Options to override fetch defaults behavior. 
     statusCallbacks: {
       401: function (res) { //Overrides fetchDefaults 401 if set.

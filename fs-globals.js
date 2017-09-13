@@ -122,6 +122,7 @@ window.FS = (function(FS, document) {
    * @returns {undefined} - Returns void.
    */
   FS.dialog = FS.dialog || {};
+
   if (!FS.dialog.register) {
     var buffer = [];
     var bufferElements = true;
@@ -132,7 +133,7 @@ window.FS = (function(FS, document) {
         return;
       }
       registerElement(elementName);
-    }
+    };
 
     function registerElement(elementName) {
       var camelCaseName = elementName.replace(/-([a-z])/g, function (g) { return g[1].toUpperCase(); });
@@ -141,16 +142,16 @@ window.FS = (function(FS, document) {
         return;
       }
       var element = document.createElement(elementName);
-      document.body.append(element)
+      document.body.append(element);
       Object.defineProperty(FS.dialog, camelCaseName, {
         get: function() {
           return element;
         }
       });
-    };
+    }
 
-    document.addEventListener("DOMContentLoaded", function(event) {
-      bufferElements = false
+    document.addEventListener("DOMContentLoaded", function() {
+      bufferElements = false;
       buffer.forEach(registerElement)
     });
   }
@@ -162,17 +163,18 @@ window.FS = (function(FS, document) {
    */
   FS.fetchDefaults = FS.fetchDefaults || {
     headers: {
-      "accept": 'application/json',
-      "accept-language": FS.simpleLocale()
+      "Accept": 'application/json',
+      "Content-Type": 'application/json',
+      "Accept-language": FS.simpleLocale()
     },
     credentials: "same-origin",
     statusCallbacks: {
       401: function () {
         window.location.reload();
-        return;
       }
     }
   };
+
   // TODO: remove Object.assign polyfill when IE11 supports it or we don't support IE11
   // Polyfill for Object.assign
   if (typeof Object.assign != 'function') {
@@ -199,7 +201,9 @@ window.FS = (function(FS, document) {
       return to;
     };
   }
-  
+
+  // TODO: remove this once all supported browsers have String.includes support
+  // Polyfill for String.includes
   if (!String.prototype.includes) {
     String.prototype.includes = function(search, start) {
       'use strict';
@@ -214,11 +218,11 @@ window.FS = (function(FS, document) {
       }
     };
   }
-  
+
   /**
-   * @param {string} url                  The path to the resource you are fetching
-   * @param {JSON object} fetchInit       The init object from fetch api. This is where you can do 1 time overwrites of headers as well.
-   * @param {JSON object} fsFetchOptions       This is where one time status options that can be applied with the same form as fetch defaults.
+   * @param {string} url             The path to the resource you are fetching
+   * @param {Object} fetchInit       The init object in JSON format from fetch api. This is where you can do 1 time overwrites of headers as well.
+   * @param {Object} fsFetchOptions  This is where one time status options that can be applied with the same form as fetch defaults.
    *
    * fsFetchOptionsEx = {
    *    preProcessingCallback: function(fetchInit) { return fetchInit },
@@ -255,8 +259,8 @@ window.FS = (function(FS, document) {
     fetchInit.method = fetchInit.method || 'get';
     fetchInit.cache = fetchInit.cache || 'default';
 
-    fetchInit.credentials = FS.fetchDefaults.credentials || fetchInit.credentials;
-    fetchInit.headers = createHeadersWithDefaults()
+    fetchInit.credentials = fetchInit.credentials || FS.fetchDefaults.credentials;
+    fetchInit.headers = createHeadersWithDefaults();
     var options = Object.assign({}, fetchInit, fsFetchOptions);
     var statusCallbacks = Object.assign({}, FS.fetchDefaults.statusCallbacks, options.statusCallbacks);
 
@@ -284,20 +288,39 @@ window.FS = (function(FS, document) {
         })
     }
 
-    function createHeadersWithDefaults() {
-      var headers = fetchInit.headers || new Headers();
-      if (!headers.has) {
-        // this is not a headers object, it's just an object - this is not what the spec says to do
-        headers = Object.assign({}, FS.fetchDefaults.headers, fetchInit.headers);
-      } else {
-        // this is a headers object, so we'll append any headers we don't have
-        Object.keys(FS.fetchDefaults.headers).forEach(function(key){
-          if (!headers.has(key)) {
-            headers.append(key, FS.fetchDefaults.headers[key])
-          }
-        })
 
+    function isHeadersObject(checkHeader) {
+      return (checkHeader.has && checkHeader.get && checkHeader.set);
+    }
+
+    /**
+     *  Force the input headers to be a Headers object for fetch
+     *
+     * @param fetchInitHeaders Input headers optionally supplied to fetch
+     */
+    function correctInputHeaders(fetchInitHeaders) {
+      var headers = fetchInitHeaders;
+      if (headers && !isHeadersObject(headers)) {
+        headers = new Headers();
+        Object.keys(fetchInitHeaders).forEach(function(key) {
+          headers.set(key, fetchInitHeaders[key])
+        });
       }
+      return headers || new Headers();
+    }
+
+    function createHeadersWithDefaults() {
+      var headers = correctInputHeaders(fetchInit.headers);
+      Object.keys(FS.fetchDefaults.headers).forEach(function(key) {
+        if (!headers.has(key)) {
+
+          // Content-Type should only be set when body is being passed
+          if (key !== 'Content-Type' || (fetchInit && fetchInit.body) ) {
+            headers.set(key, FS.fetchDefaults.headers[key]);
+          }
+
+        }
+      });
       return headers;
     }
   };
