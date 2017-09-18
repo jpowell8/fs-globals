@@ -334,5 +334,65 @@ window.FS = (function(FS, document) {
     });
   };
 
+  FS.Cookie = FS.Cookie || {
+
+    /**
+      * @function - setCookie sets a cookie with the specified parameters--path, expires and domain are optional params. If expires is null then cookie will expire with the session.
+      * @param {string} cookieID - The name of the cookie to be stored
+      * @param {string} cValue - The value to be stored in the cookie
+      * @param {string} [path] - The path of the cookie to be set. Defaults to "/"
+      * @param {Date|string|integer} [expires] - Either a date object or date string specifying the cookie Expires, or an integer specifying the Max-Age in seconds from now. Not providing this parameter will result in the creation of a session cookie
+      * @param {string} [domain] - The domain of the cookie to be set. Defaults to the current domain
+      * @returns - nothing
+      * @calls - document.cookie()
+    */
+    setCookie: function(cookieID, cValue, path, expires, domain) {
+      var expDate = expires || null;
+      var cPath = path || null;
+      var domain = domain || null;
+      var NameOfCookie = cookieID;
+      var cookieString = NameOfCookie + "=" + escape(cValue);
+      if(cPath){
+        cookieString += ";path=" + cPath;
+      }
+      if(domain){
+        cookieString += ";domain=" + domain;
+      }
+      if(expDate){
+        if(typeof(expDate) === 'number') {
+          cookieString += ";max-age=" + expDate;
+        } else {
+          if(typeof(expDate) !== 'string') {
+            expDate = expDate.toUTCString();
+          }
+          cookieString += ";expires=" + expDate;
+        }
+      }
+      document.cookie = cookieString;
+    },
+
+    /* Delete an existing cookie */
+    unsetCookie: function(cookieID, path, domain) {
+      FS.Cookie.setCookie(cookieID, null, path, "Thu, 01-Jan-1970 00:00:01 GMT", domain);
+    },
+
+    /* Returns a named cookie if available */
+    getCookie: function(cookieID) {
+      var dc = document.cookie, prefix = cookieID + "=", begin = dc.indexOf("; " + prefix);
+      if (begin == -1) {
+        begin = dc.indexOf(prefix);
+        if (begin !== 0)
+          return null;
+      }
+      else
+        begin += 2;
+      var end = document.cookie.indexOf(";", begin);
+      if (end == -1)
+        end = dc.length;
+      return unescape(dc.substring(begin + prefix.length, end));
+    }
+
+  };
+
   return FS;
 })(window.FS || {}, document);
