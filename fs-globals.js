@@ -202,6 +202,23 @@ window.FS = (function(FS, document) {
     };
   }
 
+  // TODO: remove this once all supported browsers have String.includes support
+  // Polyfill for String.includes
+  if (!String.prototype.includes) {
+    String.prototype.includes = function(search, start) {
+      'use strict';
+      if (typeof start !== 'number') {
+        start = 0;
+      }
+
+      if (start + search.length > this.length) {
+        return false;
+      } else {
+        return this.indexOf(search, start) !== -1;
+      }
+    };
+  }
+
   /**
    * @param {string} url             The path to the resource you are fetching
    * @param {Object} fetchInit       The init object in JSON format from fetch api. This is where you can do 1 time overwrites of headers as well.
