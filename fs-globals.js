@@ -142,7 +142,7 @@ window.FS = (function(FS, document) {
         return;
       }
       var element = document.createElement(elementName);
-      document.body.append(element);
+      document.body.appendChild(element);
       Object.defineProperty(FS.dialog, camelCaseName, {
         get: function() {
           return element;
