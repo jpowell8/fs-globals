@@ -351,5 +351,242 @@ window.FS = (function(FS, document) {
     });
   };
 
+  FS.Cookie = FS.Cookie || {
+
+    /**
+      * @function - setCookie sets a cookie with the specified parameters--path, expires and domain are optional params. If expires is null then cookie will expire with the session.
+      * @param {string} cookieID - The name of the cookie to be stored
+      * @param {string} cValue - The value to be stored in the cookie
+      * @param {string} [path] - The path of the cookie to be set. Defaults to "/"
+      * @param {Date|string|integer} [expires] - Either a date object or date string specifying the cookie Expires, or an integer specifying the Max-Age in seconds from now. Not providing this parameter will result in the creation of a session cookie
+      * @param {string} [domain] - The domain of the cookie to be set. Defaults to the current domain
+      * @returns - nothing
+      * @calls - document.cookie()
+    */
+    setCookie: function(cookieID, cValue, path, expires, domain) {
+      var expDate = expires || null;
+      var cPath = path || null;
+      var domain = domain || null;
+      var NameOfCookie = cookieID;
+      var cookieString = NameOfCookie + "=" + escape(cValue);
+      if(cPath){
+        cookieString += ";path=" + cPath;
+      }
+      if(domain){
+        cookieString += ";domain=" + domain;
+      }
+      if(expDate){
+        if(typeof(expDate) === 'number') {
+          cookieString += ";max-age=" + expDate;
+        } else {
+          if(typeof(expDate) !== 'string') {
+            expDate = expDate.toUTCString();
+          }
+          cookieString += ";expires=" + expDate;
+        }
+      }
+      document.cookie = cookieString;
+    },
+
+    /* Delete an existing cookie */
+    unsetCookie: function(cookieID, path, domain) {
+      FS.Cookie.setCookie(cookieID, null, path, "Thu, 01-Jan-1970 00:00:01 GMT", domain);
+    },
+
+    /* Returns a named cookie if available */
+    getCookie: function(cookieID) {
+      var dc = document.cookie, prefix = cookieID + "=", begin = dc.indexOf("; " + prefix);
+      if (begin == -1) {
+        begin = dc.indexOf(prefix);
+        if (begin !== 0)
+          return null;
+      }
+      else
+        begin += 2;
+      var end = document.cookie.indexOf(";", begin);
+      if (end == -1)
+        end = dc.length;
+      return unescape(dc.substring(begin + prefix.length, end));
+    }
+
+  };
+
+  (function(FS) {
+   /* local and session Storage helper functions on the FS object. */
+    FS.localStorage = {};
+    FS.sessionStorage = {};
+
+    var SUPPORTED = (typeof Storage !== 'undefined'),
+        PREFIX = 'FS';
+
+    //iOS 7 Private Browsing still has storage functions available, but any attempt to use them will throw a JavaScript error: "QuotaExceededError: DOM Exception 22: An attempt was made to add something to storage that exceeded the quota."
+    try {localStorage.test = 0;} catch (e) {
+      SUPPORTED = false;
+    }
+
+    var apis = [
+      // simple/empty will not use any user id to make the key.
+      // Intended to be used for all users.
+      {
+        name: '',
+        keyMaker: makeSimpleKey
+      },
+      // UserData will use the helper id or the logged-in user id to make the key.
+      {
+        name: 'UserData',
+        keyMaker: makeUserKey
+      },
+      // RealUserData will only use the logged-in user id to make the key.
+      {
+        name: 'RealUserData',
+        keyMaker: makeRealUserKey
+      }
+    ];
+
+    var storageNames = [ 'localStorage', 'sessionStorage' ];
+
+    // create
+    // FS.localStorage.set
+    // FS.localStorage.setUserData
+    // ...
+    // FS.sessionStorage.get
+    // FS.sessionStorage.getUserData
+    // ...
+    for (var i = 0; i < storageNames.length; i++) {
+      var storageName = storageNames[i];
+
+      (function(storageName) {
+        for (var j = 0; j < apis.length; j++) {
+          var api = apis[j];
+
+          (function(api) {
+            FS[storageName]['set' + api.name] = function(key, value) {
+              return addToStorage(storageName, api.keyMaker, key, value);
+            }
+
+            FS[storageName]['get' + api.name] = function(key){
+              return getFromStorage(storageName, api.keyMaker, key);
+            }
+
+            FS[storageName]['remove' + api.name] = function(key){
+              return removeFromStorage(storageName, api.keyMaker, key);
+            }
+          })(api);
+        }
+
+        FS[storageName]['moveToUserData'] = function(key){
+          return moveToUserData(storageName, key);
+        }
+
+        FS[storageName]['clear'] = function(){
+          if(!SUPPORTED){return;}
+          window[storageName].clear();
+        }
+      })(storageName);
+    }
+
+
+    // utils
+
+    function hashCode(str) {
+      var ret = 0;
+      for(var i = 0, len = str.length; i < len; i++) {
+          ret = (31 * ret + str.charCodeAt(i)) << 0;
+      }
+      return ret;
+    }
+
+    function makeKey(key, userIdGetter) {
+      if (!key) return null;
+      if (userIdGetter) {
+        var userId = userIdGetter();
+        if (!userId) return null;
+        key += '-' + hashCode(userId);
+      }
+      return PREFIX+'.'+key;
+    }
+
+    function makeSimpleKey(key) {
+      return makeKey(key);
+    }
+
+    function makeUserKey(key) {
+      return makeKey(key, FS.User.getEffectiveId);
+    }
+
+    function makeRealUserKey(key) {
+      return makeKey(key, FS.User.getId);
+    }
+
+    function moveToUserData(storageName, key) {
+      var userId = FS.User.getEffectiveId();
+      if (!userId) return;
+      var value = getFromStorage(storageName, makeSimpleKey, key);
+      if (value) {
+        addToStorage(storageName, makeUserKey, key, value);
+        removeFromStorage(storageName, makeSimpleKey, key);
+      }
+    }
+
+    function addToStorage(storageName, keyMaker, key, value){
+      if(!SUPPORTED){return;}
+
+      key = keyMaker(key);
+      if (!key) return;
+
+      if (typeof value === "undefined") {
+        value = null;
+      }
+
+      if (Array.isArray(value) || value === Object(value)) {
+        value = JSON.stringify(value);
+      }
+
+      window[storageName].setItem(key, value);
+
+      return true;
+    }
+
+    function getFromStorage(storageName, keyMaker, key){
+      if(!SUPPORTED){return null;}
+
+      key = keyMaker(key);
+      if (!key) return null;
+
+      var item = window[storageName].getItem(key) || null;
+
+      if (!item || item === 'null') {
+        return null;
+      }
+
+      if (item.charAt(0) === "{" || item.charAt(0) === "[") {
+        return JSON.parse(item);
+      }
+
+      return item;
+    }
+
+    function removeFromStorage(storageName, keyMaker, key){
+      if(!SUPPORTED){return;}
+
+      /// if valid session, remove proper key:val
+      if(FS.User.profile) {
+        window[storageName].removeItem(keyMaker(key));
+
+      // else remove all with base of key
+      } else {
+        for (var i=0, j=window[storageName].length; i<j; i++) {
+          var value = window[storageName].key(i);
+          if (value && value.indexOf("FS." + key) !== -1) {
+            window[storageName].removeItem(value);
+          }
+        }
+      }
+
+      return true;
+    }
+
+  })(FS);
+
   return FS;
 })(window.FS || {}, document);
