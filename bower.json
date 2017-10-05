@@ -1,7 +1,7 @@
 {
   "name": "fs-globals",
   "description": "Functions and properties used globally across the FamilySearch site, available to web components.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "homepage": "https://github.com/fs-webdev/fs-globals",
   "author": {
     "name": "FamilySearch",
