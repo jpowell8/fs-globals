@@ -8,3 +8,5 @@ FS.Analytics = { trackData:function() {}, trackLink: function() {}, trackPageVie
 // Besides ensuring that window.fetch is never actually called during a test, this method
 // can be spied on or matched for specific parameters. (i.e. FS.fetchStub.withArgs(...).returns(...) )
 FS.fetchStub = FS.fetchStub || sinon.stub(window,"fetch");
+
+FS.showEx = function () { return false };
