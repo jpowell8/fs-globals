@@ -590,3 +590,598 @@ window.FS = (function(FS, document) {
 
   return FS;
 })(window.FS || {}, document);
+
+/* EXPERIMENTS.JS */
+
+/* global FS */
+(function (experiments, FS) {
+
+  if (FS && FS.initEx && FS.defaultEx && FS.activeList && FS.setEx && FS.listEx && FS.showEx) return;
+
+  var SHARED_KEY = 'shared-ui'
+    , hostName = window.location.hostname.toLowerCase()
+    , sharedExs = {}
+    , localExs = {}
+    , expDiv = null
+    , appName = FS.appName || 'none'
+    , EXPERIMENTS_COOKIE_NAME = 'fs_experiments'
+    , EXPERIMENTS_COOKIE_NAME_APLPHA_SORT = 'fs_experiments_sort_alpha'
+    , APP_EXPERIMENTS_COOKIE_NAME = 'fs_ex_' + appName
+    , allExps = { apps: {} }
+    , listOfExpNames //for search
+    , expsTemplate
+    , ONE_YEAR_IN_MS = 365 * 24 * 60 * 60 * 1000
+    , initialized = false;
+
+
+  /* Styles for DOM experiment list */
+  var css = '#fs-experiment-list{z-index:9999;position:absolute;top:5px;left:5px;background-color:#7D6AAD;max-height:95%;overflow:auto;padding:8px;width:325px;border-radius:5px;box-shadow:5px 10px 15px 0 #999}#fs-experiment-list header{overflow:auto;display:inline-block;margin-bottom:-5px}#fs-experiment-list header h4{color:#fff;padding:0;margin:0;cursor:pointer;font-weight:700}#fs-experiment-list header h4 span{font-size:10px}#fs-experiment-list .tools:hover{text-decoration:underline}#fs-experiment-list .tools{float:right;padding-left:10px;text-decoration:none;color:#fff;font-size:15px}#fs-experiment-list section span{position:relative;top:5px;cursor:pointer;padding:5px;background-color:#ddd;width:125px;height:45px;font-size:14px;font-weight:700;text-align:center;display:inline-block;text-transform:uppercase;margin-top:0;transition:all .1s ease-in-out}#fs-experiment-list section span.selected:hover{background-color:#fff}#fs-experiment-list section span.selected{top:0;background-color:#fff}#fs-experiment-list section span:hover{background-color:#ccc}#fs-experiment-list ul{list-style-type:none;margin:-22px 0 0;background-color:#fff;padding:10px;position:relative;border-radius:0 5px 5px;min-height:10px}#fs-experiment-list section label:hover{background-color:rgba(125,106,173,.44)}#fs-experiment-list section label{display:block;padding:0;font-size:14px}#fs-experiment-list section label input{margin:3px}#fs-experiment-list .hide_search{display:block}#fs-experiment-list #searchBox{width:310px;padding:5px 5px 5px 10px;margin:10px 0 20px;font-weight:700;border-radius:5px;border:0;font-size:14px;outline:0;background-color:#584686;color:#fff}#fs-experiment-list .close-experiments{font-weight:700;line-height:10px;color:#584686;text-decoration:none;margin-left:5px}#fs-experiment-list #pin-experiments{width:15px;height:15px;border-radius:50% 50% 50% 0;background:#584686;transform:rotate(-45deg);display:inline-block;float:right;margin:2px 5px 0 0}#fs-experiment-list #pin-experiments:after{content:"";width:6px;height:6px;border-radius:50px;display:inline-block;background-color:#fff;margin:0 0 5px 4px}',
+    head = document.head || document.getElementsByTagName('head')[0],
+    style = document.createElement('style');
+    style.appendChild(document.createTextNode(css));
+
+  head.appendChild(style);
+
+
+  function deserializeExperiments(cookie, templates) {
+    if(! (typeof(cookie) === 'string' && cookie.length)) return;
+
+    if (cookie.indexOf('u=') === -1) return {};
+
+    var userId = cookie.match(/u=[^,]+/)[0].replace('u=','')
+      , apps = cookie.split('&')
+      , exps = { userId: userId }
+      , appData = exps.apps = {};
+
+    var setFeatures = function(app, template) {
+      if (! template) return;
+      var features = app.features = {}
+        , values = app.values
+        , dirty = app.dirtyFeatures = []
+        , names = Object.keys(template);
+
+      names.map(function(name, idx) {
+        var value = values[idx] === '1'
+          , origValue = !! template[name];
+
+        features[name] = value;
+      });
+    };
+
+    apps.map(function(item) {
+      var app;
+      try {
+        var name = item.match(/a=[^,]+/)[0].replace('a=','');
+
+        app = appData[name] = {};
+
+        if (name !== 'shared-ui' && name !== appName) {
+          appData[name] = item;
+          return;
+        }
+
+        app.stamp = item.match(/s=[^,]+/)[0].replace('s=','');
+        app.values = item.match(/v=[^,]+/)[0].replace('v=','');
+        setFeatures(app, (templates[name] || {}).features);
+        delete app.values;
+        app.bucket = item.match(/b=[^,]+/)[0].replace('b=','');
+        return app;
+      } catch(e) {
+        console.error('Old Experiment is bad');
+      }
+    });
+
+    return exps;
+  } // deserializeExperiments()
+
+  function serializeExperiments(exps, username) {
+    var contents = []
+      , expApps = exps.apps || {}
+      , expAppKeys = Object.keys(expApps);
+
+    function serialize(appExps, appName) {
+      // Not re-serializing other-app experiments
+      if (typeof appExps === 'string') return appExps;
+
+      var parts = [ 'a=' + (appName ? appName : '') ]
+        , features = appExps.features || {}
+        , featureKeys = Object.keys(features);
+
+      parts.push('s=' + appExps.stamp);
+      var values = '';
+
+      for(var i = 0; i < featureKeys.length; i++) {
+        values += features[featureKeys[i]] ? '1' : '0';
+      }
+      parts.push('v=' + values);
+      parts.push('b=' + appExps.bucket);
+      return parts;
+    }
+
+    if (exps.apps) {
+      for(var i = 0; i < expAppKeys.length; i++) {
+        contents.push(serialize(expApps[expAppKeys[i]], expAppKeys[i]));
+      }
+    } else {
+      contents.push(serialize(exps));
+    }
+
+    return 'u=' + username + ',' + contents.join('&');
+  }
+
+  function getExperimentsFromCookie() {
+    var cookieString = FS.Cookie.getCookie(EXPERIMENTS_COOKIE_NAME) || ''
+      , appCookieString = FS.Cookie.getCookie(APP_EXPERIMENTS_COOKIE_NAME) || ''
+      , exps = {}
+      , appExps = {};
+
+    if (!(cookieString || appCookieString)) {
+      return {};
+    }
+
+    if (!expsTemplate && window.manifest) {
+      expsTemplate = window.manifest.experiments;
+    }
+
+    try {
+      allExps = deserializeExperiments(cookieString, expsTemplate.apps);
+    } catch (e) {
+      allExps = { apps: {} };
+    }
+
+    allExps.apps[appName] = allExps.apps[appName] || appExps || { features: {} };
+    allExps.apps[SHARED_KEY] = allExps.apps[SHARED_KEY] || { features: {} };
+
+    return allExps.apps;
+  }
+
+  function setExperimentsCookie(exs, sharedExs) {
+    var experiments = allExps
+      , expireDateTime = new Date((new Date()).getTime() + (ONE_YEAR_IN_MS)) //set expiration date for 1 year
+      , serialized;
+
+    serialized = serializeExperiments(experiments, experiments.userId);
+    FS.Cookie.setCookie(EXPERIMENTS_COOKIE_NAME, serialized, "/", expireDateTime);
+  }
+
+  function clearExperimentsCookie() {
+    FS.Cookie.unsetCookie(EXPERIMENTS_COOKIE_NAME, "/");
+    FS.Cookie.unsetCookie(APP_EXPERIMENTS_COOKIE_NAME, "/");
+  }
+
+  function setAlphabeticalSort(){
+    FS.Cookie.setCookie(EXPERIMENTS_COOKIE_NAME_APLPHA_SORT, "1", "/");
+    document.querySelector("body").removeChild(document.querySelector("#fs-experiment-list"));
+    FS.listEx();
+  }
+
+  function unsetAlphabeticalSort(){
+    FS.Cookie.unsetCookie(EXPERIMENTS_COOKIE_NAME_APLPHA_SORT, "/");
+    document.querySelector("body").removeChild(document.querySelector("#fs-experiment-list"));
+    FS.listEx();
+  }
+
+  function getClassNames(exs) {
+    var classNames = [];
+    if(exs) {
+      for(var ex in exs.features) {
+        if(!exs.features[ex]) {
+          continue;
+        }
+        else if(typeof exs.features[ex] === 'boolean' || typeof exs.features[ex] === 'number') {
+          classNames.push("ex_" + ex);
+        } else {
+          for(var vName in exs.features[ex]) {
+            if(exs.features[ex][vName]) {
+              classNames.push("ex_" + ex + " ex_" + ex + "_" + vName);
+              break;
+            }
+          }
+        }
+      }
+    }
+    return classNames;
+  }
+
+  function addLines(container, exs, title) {
+
+    function makeLine(name, value) {
+      var li = document.createElement("li");
+        li.id = name;
+        li.setAttribute("class", "hide_search");
+      var label = document.createElement("label");
+      var input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = name;
+        if (value === "checked") {
+          input.setAttribute("checked", value);
+        }
+
+        input.setAttribute("onclick","javascript:FS.setEx('" + input.value + "', !FS.showEx('" + input.value + "'))");
+
+        label.appendChild(input);
+        label.innerHTML += "&nbsp;" + name;
+        li.appendChild(label);
+
+      container.appendChild(li);
+    }
+
+    var exName, exVal, keys = [];
+
+    var callMakeLine = function(exName) {
+      if (exs.features.hasOwnProperty(exName)) {
+        exVal = exs.features[exName];
+
+        if(typeof exVal === 'boolean' || typeof exVal === 'number') {
+          makeLine(exName, exVal ? "checked" : "");
+        } else {//object with variants
+          for(var vName in exVal) {
+            if (exVal.hasOwnProperty(vName)) {
+              makeLine(exName + "#" + vName, exVal[vName] ? "checked" : "");
+            }
+          }
+        }
+      }
+    }
+
+    if (FS.Cookie.getCookie(EXPERIMENTS_COOKIE_NAME_APLPHA_SORT) != undefined) {
+      for (exName in exs.features) {
+        callMakeLine(exName);
+      }
+    } else { // Sort based on the cookie
+      Object.keys(exs.features || exs).sort().forEach(function (exName) {
+        callMakeLine(exName);
+      });
+    }
+  }
+
+  /* Inits Experiments */
+  FS.initEx = function() {
+    getExperimentsFromCookie();
+
+    var classNames = [];
+    localExs = allExps.apps[appName] || (allExps.apps[appName] = {});
+    sharedExs = allExps.apps[SHARED_KEY] || (allExps.apps[SHARED_KEY] = {});
+
+    if (Object.keys(localExs).length === 0) { localExs.features = {} }
+    if (Object.keys(sharedExs).length === 0) { sharedExs.features = {} }
+    listOfExpNames = Object.keys(localExs.features).concat(Object.keys(sharedExs.features));
+
+    /* Add classes to html tag for each experiment so css styles can be targeted */
+    classNames = classNames.concat(getClassNames(localExs));
+    classNames = classNames.concat(getClassNames(sharedExs));
+
+    document.documentElement.className += " " + classNames.join(' ');
+
+    /* Dispatch an event in case someone is listening */
+    var evt = document.createEvent('HTMLEvents');
+    evt.initEvent('ExReady', true, false);
+    window.dispatchEvent(evt);
+
+    initialized = true;
+  }
+
+  // Public Variables and Methods
+  window.FS = Object.assign((typeof FS === "object" ? FS : {}), {
+
+    defaultEx: function(template) {
+      expsTemplate = template;
+    },
+
+    activeList: function() {
+      var active = [],
+          name;
+      for (name in localExs.features) {
+        if (FS.showEx(name)) {
+          active.push(name);
+        }
+      }
+      for (name in sharedExs.features) {
+        if (FS.showEx(name)) {
+          active.push(name);
+        }
+      }
+      return active;
+    },
+
+    setEx: function (name, value) {
+      console.log("Running setEX", name, value);
+      value = value ? 1 : 0;
+      var apps = allExps.apps
+        , obj = (apps[appName].features || (apps[appName].features = {}))
+        , sharedObj = (apps[SHARED_KEY].features || (apps[SHARED_KEY].features = {}))
+        , toks = name.split('#');
+
+      if(toks.length === 2) {
+        if(sharedObj[toks[0]] !== undefined) {
+          sharedObj = sharedObj[toks[0]] = sharedObj[toks[0]] || {};
+        } else {
+          obj = obj[toks[0]] = obj[toks[0]] || {};
+        }
+
+        name = toks[1];
+      }
+
+      // both the shared and app experiments must be in sync, otherwise, if an experiment
+      // is in both lists you'll never be able to change it from listEx() or setEx()
+      if(sharedObj[name] !== undefined) {//shared experiment
+        sharedObj[name] = value;
+        if(sharedExs.dirtyFeatures && sharedExs.dirtyFeatures.join(' ').indexOf(toks[0]) === -1) { //add feature name to dirtyFeature array if it's not already there
+          sharedExs.dirtyFeatures.push(toks[0]);
+        }
+      }
+
+      // unit tests do not populate the experiment object so we need to allow them to
+      // dynamically set any experiment name. This prevents dynamically setting an
+      // experiment in the app list if it already exists in the shared list
+      if(obj[name] !== undefined || sharedObj[name] === undefined) {//app experiment
+        obj[name] = value;
+        if(localExs.dirtyFeatures && localExs.dirtyFeatures.join(' ').indexOf(toks[0]) === -1) { //add feature name to dirtyFeature array if it's not already there
+          localExs.dirtyFeatures.push(toks[0]);
+        }
+      }
+
+      setExperimentsCookie();
+    },
+
+    listEx: function() {
+      expDiv = document.createElement("div");
+        expDiv.id = "fs-experiment-list";
+        expDiv.innerHTML = "<header><h4>FS Experiments <span>&#x25BC;</span></h4></header>";
+
+
+      /* CLOSE div */
+      var closeDiv = document.createElement("a");
+        closeDiv.href = "javascript: void(0);";
+        closeDiv.setAttribute("class", "tools close-experiments");
+        closeDiv.innerHTML = "x";
+        closeDiv.onclick = function() {
+          document.querySelector("body").removeChild(document.querySelector("#fs-experiment-list"));
+        }
+
+      expDiv.appendChild(closeDiv);
+
+
+      /* RESET div */
+      var resetDiv = document.createElement("a");
+        resetDiv.href = "javascript: void(0);";
+        resetDiv.setAttribute("class", "tools");
+        resetDiv.innerHTML = "Reset";
+        resetDiv.onclick = function() {
+          clearExperimentsCookie();
+          window.location.reload();
+        };
+
+      expDiv.appendChild(resetDiv);
+
+
+      /* SORT div */
+      var sort_alphabetically = FS.Cookie.getCookie(EXPERIMENTS_COOKIE_NAME_APLPHA_SORT) != undefined;
+
+      if (sort_alphabetically) {
+        var unsetSort = document.createElement("a");
+          unsetSort.href = "javascript: void(0);";
+          unsetSort.setAttribute("class", "tools");
+          unsetSort.setAttribute("style", "color:grey;");
+          unsetSort.innerHTML = "A-z";
+          unsetSort.onclick = function() {
+            unsetAlphabeticalSort();
+          };
+
+        expDiv.appendChild(unsetSort);
+
+      } else {
+        var alphaSort = document.createElement("a");
+          alphaSort.href = "javascript: void(0);";
+          alphaSort.setAttribute("class", "tools");
+          alphaSort.innerHTML = "A-z";
+          alphaSort.onclick = function() {
+            setAlphabeticalSort();
+          };
+
+        expDiv.appendChild(alphaSort);
+      }
+
+
+      /* Pin Experiments */
+      var pinDiv = document.createElement("a");
+        pinDiv.href = "javascript: void(0);";
+        pinDiv.id = "pin-experiments";
+        pinDiv.onclick = function() {
+          if (FS.sessionStorage.get("fs-experiments-sticky")) {
+            FS.sessionStorage.remove("fs-experiments-sticky");
+            document.querySelector("#pin-experiments").style.backgroundColor = "#584686";
+          } else {
+            FS.sessionStorage.set("fs-experiments-sticky", { state: "show"});
+            document.querySelector("#pin-experiments").style.backgroundColor = "#FF7600";
+          }
+        }
+
+      expDiv.appendChild(pinDiv);
+
+
+      /* Search Box */
+      var searchBox = document.createElement("input");
+        searchBox.id = "searchBox";
+        searchBox.placeholder = "search";
+        searchBox.style.display = "block"; //so we can hide it later
+
+        searchBox.onkeyup = function() {
+          var search_results = [];
+          var search_filter = document.querySelector("#searchBox").value.toLowerCase();
+
+          listOfExpNames.map(function(e) {
+            if (e.toLowerCase().indexOf(search_filter) !== -1) {
+              search_results.push(e);
+            }
+          })
+
+          /* First hide everything */
+          if (search_filter.length > 0) {
+            var all = document.querySelectorAll(".hide_search");
+
+            for (var i=0,j=all.length; i<j; i++) {
+              all[i].style.display = "none";
+            }
+          }
+
+          /* Show experiments found */
+          search_results.map(function(e) {
+            document.querySelector("#" + e).style.display = "block";
+          });
+        }
+
+      expDiv.appendChild(searchBox);
+
+
+      /* Experiment section */
+      expSection = document.createElement("section");
+      expSection.style.display = "block";
+
+      if (sharedExs) {
+        createExperimentGroup(sharedExs, "Shared");
+      }
+
+      if (localExs) {
+        createExperimentGroup(localExs, appName.charAt(0).toUpperCase() + appName.slice(1)); //TODO: Add sanitation
+      }
+
+      // Prevent the experiments list from scrolling the document
+      FS.Helpers.preventParentScroll(expDiv);
+
+      // Append experiment div to body
+      expDiv.appendChild(expSection);
+
+      document.body.insertBefore(expDiv, document.body.childNodes[0]);
+
+
+
+
+      /* CUSTOMIZE Experiment list based on session storage */
+      if (FS.sessionStorage.get("fs-experiments-sticky")) {
+        document.querySelector("#pin-experiments").style.backgroundColor = "#FF7600";
+
+        if (FS.sessionStorage.get("fs-experiments-sticky").state === "hide") {
+          document.querySelector("#fs-experiment-list section").style.display = "none";
+          document.querySelector("#fs-experiment-list #searchBox").style.display = "none";
+        }
+      }
+
+      // toggle experiment list
+      document.querySelector("#fs-experiment-list header").onclick = function() {
+        var section = document.querySelector("#fs-experiment-list section");
+        var searchBox = document.querySelector("#fs-experiment-list #searchBox");
+
+        if (section.style.display === "block") {
+          FS.sessionStorage.set("fs-experiments-sticky", { state: "hide"});
+          section.style.display = "none";
+          searchBox.style.display = "none";
+        } else {
+          FS.sessionStorage.set("fs-experiments-sticky", { state: "show"});
+          section.style.display = "block";
+          searchBox.style.display = "block";
+        }
+      };
+
+      if (FS.sessionStorage.get("fs-experiments-tab")) {
+        document.querySelector("#css-tab-shared").click();
+      } else {
+        document.querySelector("#css-tab-app").click();
+      }
+
+      function createExperimentGroup(groupExps, appName) {
+        var span = document.createElement("span");
+          span.id = (appName === "Shared") ? "css-tab-shared" : "css-tab-app";
+          span.innerHTML = appName;
+
+        expSection.insertBefore(span, expSection.firstChild);
+        // expSection.appendChild(span)
+
+        var groupContainer = document.createElement("ul");
+        groupContainer.id = (appName === "Shared") ? span.id + "-content" : span.id + "-content";
+        groupContainer.style.display = "block";
+        expSection.appendChild(groupContainer);
+
+        span.onclick = function() {
+          toggleLists(groupContainer.id);
+        };
+
+        addLines(groupContainer, groupExps);
+      }
+
+    },
+
+    showEx: function (name, defaultValue) {
+      if (!initialized) FS.initEx();
+      if (name === null || name.length === 0) {
+        return true;
+      }
+
+      if (defaultValue === undefined) {
+        defaultValue = false;
+      }
+
+      var obj = (localExs.features || (localExs.features = {})),
+          sharedObj = (sharedExs.features || (sharedExs.features = {})),
+          toks = name.split('#'),
+          appResult = false,
+          sharedResult = false;
+
+      if(toks.length === 2) {
+        if(sharedObj[toks[0]] !== undefined) {
+          sharedObj = sharedObj[toks[0]] = sharedObj[toks[0]] || {};
+        } else {
+          obj = obj[toks[0]] = obj[toks[0]] || {};
+        }
+        name = toks[1];
+      }
+
+      if ((obj[name] === undefined) && (sharedObj[name] === undefined)) {
+        return defaultValue;
+      }
+
+      appResult = obj[name] ? true : false;//TODO: This will need to change to return variant names
+      sharedResult = sharedObj[name] ? true : false;//TODO: This will need to change to return variant names
+
+      if(appResult) {
+        return appResult;
+      } else {
+        return sharedResult;
+      }
+    }
+  });
+
+  var arrows = {
+    down: "&#x25BC;",
+    left: "&#x25C0;"
+  };
+
+  function toggleLists(name) {
+    document.querySelector("#" + name).style.display = "block";
+    if (name === "css-tab-shared-content") {
+      FS.sessionStorage.set("fs-experiments-tab", "shared");
+      document.querySelector("#css-tab-app-content").style.display = "none";
+      document.querySelector("#css-tab-shared").setAttribute("class", "selected");
+      document.querySelector("#css-tab-app").setAttribute("class", "");
+    } else {
+      FS.sessionStorage.remove("fs-experiments-tab");
+      document.querySelector("#css-tab-shared-content").style.display = "none";
+      document.querySelector("#css-tab-app").setAttribute("class", "selected");
+      document.querySelector("#css-tab-shared").setAttribute("class", "");
+    }
+  }
+
+  //Initialization Code
+  document.addEventListener("DOMContentLoaded", function() {
+    var exsFromGlobalNamespace = typeof experiments == "object" ? experiments : {}; //base experiment list off of global 'experiments' variable, if it exists
+
+    //Although exsFromGlobalNamespace is passed into FS.initEx, it is never used.
+    if (!initialized) FS.initEx(exsFromGlobalNamespace);
+
+    // if expDiv is not null, experiments have already been initialized
+    if(FS.qs.listEx && expDiv === null || FS.sessionStorage.get("fs-experiments-sticky")) {
+      FS.listEx();
+    }
+  });
+})(window.experiments, window.FS);
+
