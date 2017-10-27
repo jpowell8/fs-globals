@@ -6,4 +6,6 @@ bower-debug.log
 buildAssets
 node_modules
 npm-debug.log
-coverage
+reports
+wct.log
+analysis.json
