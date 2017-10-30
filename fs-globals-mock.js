@@ -7,6 +7,15 @@ FS.Analytics = { trackData:function() {}, trackLink: function() {}, trackPageVie
 // WARNING: This file is intended to only be run within tests and requires sinonjs
 // Besides ensuring that window.fetch is never actually called during a test, this method
 // can be spied on or matched for specific parameters. (i.e. FS.fetchStub.withArgs(...).returns(...) )
-FS.fetchStub = FS.fetchStub || sinon.stub(window,"fetch");
+if (window && window.fetch) {
+  FS.fetchStub = FS.fetchStub || sinon.stub(window, "fetch");
+}
+FS.showEx = function (experiment) {
+  return false;
+};
+FS.fetch = function (url, fetchInit, fsFetchOptions) {
+  console.warn("FS.fetch called without being mocked !!!" + " url:" + url );
 
-FS.showEx = function () { return false };
+  // return a promise that never resolves
+  return new Promise(function (){});
+};
