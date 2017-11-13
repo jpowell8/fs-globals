@@ -64,6 +64,7 @@ describe("FS.fetch() ", function () {
   describe("Fetch defaults", function () {
     it("should populate FS.fetchDefaults with JSON object", function () {
       expect(FS.fetchDefaults).to.be.an.instanceof(Object);
+      expect(true).to.be(false);
     });
   });
   describe("FS.fetch calls ", function () {
