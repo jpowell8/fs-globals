@@ -15,7 +15,7 @@ module.exports = function(config) {
       {pattern: 'fs-globals.js', included: true },
       {pattern: 'test/**.js', included: true }
     ],
-    browsers: ['Chrome'],
+    browsers: ['Chrome','PhantomJS'],
     reporters: ['progress', 'coverage'],
     preprocessors: {
       'fs-globals.js': ['coverage']
