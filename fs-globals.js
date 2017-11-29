@@ -1179,7 +1179,7 @@ window.FS = (function(FS, document) {
     if (!initialized) FS.initEx(exsFromGlobalNamespace);
 
     // if expDiv is not null, experiments have already been initialized
-    if(FS.qs.listEx && expDiv === null || FS.sessionStorage.get("fs-experiments-sticky")) {
+    if(FS && FS.qs && FS.qs.listEx && expDiv === null || FS.sessionStorage.get("fs-experiments-sticky")) {
       FS.listEx();
     }
   });
