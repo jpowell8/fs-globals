@@ -464,8 +464,8 @@ window.FS = (function(FS, document) {
               return addToStorage(storageName, api.keyMaker, key, value);
             }
 
-            FS[storageName]['get' + api.name] = function(key){
-              return getFromStorage(storageName, api.keyMaker, key);
+            FS[storageName]['get' + api.name] = function(key, parseBoolean){
+              return getFromStorage(storageName, api.keyMaker, key, parseBoolean);
             }
 
             FS[storageName]['remove' + api.name] = function(key){
@@ -547,7 +547,7 @@ window.FS = (function(FS, document) {
       return true;
     }
 
-    function getFromStorage(storageName, keyMaker, key){
+    function getFromStorage(storageName, keyMaker, key, parseBoolean){
       if(!SUPPORTED){return null;}
 
       key = keyMaker(key);
@@ -560,6 +560,11 @@ window.FS = (function(FS, document) {
       }
 
       if (item.charAt(0) === "{" || item.charAt(0) === "[") {
+        return JSON.parse(item);
+      }
+
+      //This is to (optionally) parse booleans such that localStorage behaves the same as userPreference
+      if ( parseBoolean && (item === "true" || item === "false")) {
         return JSON.parse(item);
       }
 
