@@ -1,6 +1,6 @@
 {
   "name": "fs-globals",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Functions and properties used globally across the FamilySearch site, available to web components.",
   "directories": {
     "test": "test"
